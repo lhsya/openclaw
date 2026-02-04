@@ -1,0 +1,104 @@
+{
+  "messages": {
+    "ackReactionScope": "group-mentions",
+    "ackReactionScope_mock": "确认反应范围：只对群组中的@提及做出确认反应"
+  },
+  "env": {
+    "DEEPSEEK_API_KEY": "sk-1b9e7c80231e498a90d3a13cb397c50a",
+    "DEEPSEEK_API_KEY_mock": "DeepSeek API 密钥，用于调用 DeepSeek AI 服务"
+  },
+  "agents": {
+    "defaults": {
+      "maxConcurrent": 4,
+      "maxConcurrent_mock": "主代理最大并发数，同时运行的代理数量上限",
+      "subagents": {
+        "maxConcurrent": 8,
+        "maxConcurrent_mock": "子代理最大并发数"
+      },
+      "compaction": {
+        "mode": "safeguard",
+        "mode_mock": "压缩模式：安全压缩，用于优化上下文管理"
+      },
+      "workspace": "/Users/adamliu2/.openclaw/workspace",
+      "workspace_mock": "工作空间路径：代理执行任务时的默认工作目录",
+      "model": {
+        "primary": "deepseek/deepseek-chat",
+        "primary_mock": "主模型：默认使用的 AI 模型（格式：提供商/模型名）"
+      },
+      "models": {
+        "deepseek/deepseek-chat": {},
+        "deepseek/deepseek-chat_mock": "模型特定配置，当前为空表示使用默认设置"
+      }
+    }
+  },
+  "models": {
+    "mode": "merge",
+    "mode_mock": "合并模式：将自定义配置与默认配置合并",
+    "providers": {
+      "deepseek": {
+        "baseUrl": "https://api.deepseek.com/v1",
+        "baseUrl_mock": "API 基础 URL：DeepSeek 服务的接口地址",
+        "apiKey": "DEEPSEEK_API_KEY",
+        "apiKey_mock": "API 密钥引用：引用 env 中定义的环境变量名",
+        "api": "openai-responses",
+        "api_mock": "API 类型：使用 OpenAI 兼容的响应格式",
+        "authHeader": true,
+        "authHeader_mock": "是否在请求头中携带认证信息",
+        "models": [
+          {
+            "id": "deepseek-chat",
+            "id_mock": "模型 ID：API 调用时指定的模型标识",
+            "name": "DeepSeek Chat",
+            "name_mock": "模型显示名称",
+            "reasoning": false,
+            "reasoning_mock": "是否为推理模型：false 表示普通对话模型",
+            "input": ["text"],
+            "input_mock": "输入类型：支持的格式（当前仅支持文本）",
+            "cost": { "input": 0.14, "output": 0.28, "cacheRead": 0, "cacheWrite": 0 },
+            "cost_mock": "费用配置（美元/百万token）：input=输入费用, output=输出费用, cacheRead/Write=缓存费用",
+            "contextWindow": 64000,
+            "contextWindow_mock": "上下文窗口：模型能处理的最大 token 数量",
+            "maxTokens": 8192,
+            "maxTokens_mock": "最大输出 token：单次响应的最大 token 数"
+          }
+        ]
+      }
+    }
+  },
+  "gateway": {
+    "mode": "local",
+    "mode_mock": "运行模式：本地模式，服务运行在本机",
+    "auth": {
+      "mode": "token",
+      "mode_mock": "认证模式：使用令牌认证",
+      "token": "9a954310392d0fcaf9fb4a666645d2093a1f5482eeccd805",
+      "token_mock": "认证令牌：验证客户端请求的安全令牌"
+    },
+    "port": 19001,
+    "port_mock": "监听端口：网关服务的端口号",
+    "bind": "loopback",
+    "bind_mock": "绑定地址：仅绑定到回环地址(127.0.0.1)，只允许本机访问",
+    "tailscale": {
+      "mode": "off",
+      "mode_mock": "Tailscale VPN 模式：禁用",
+      "resetOnExit": false,
+      "resetOnExit_mock": "退出时是否重置 Tailscale 设置"
+    }
+  },
+  "wizard": {
+    "lastRunAt": "2026-02-03T03:14:07.076Z",
+    "lastRunAt_mock": "向导最后执行时间",
+    "lastRunVersion": "2026.1.30",
+    "lastRunVersion_mock": "向导运行时的软件版本",
+    "lastRunCommand": "onboard",
+    "lastRunCommand_mock": "上次执行的命令（入门引导）",
+    "lastRunMode": "local",
+    "lastRunMode_mock": "上次运行模式"
+  },
+  "meta": {
+    "lastTouchedVersion": "2026.1.30",
+    "lastTouchedVersion_mock": "配置文件最后被修改时的软件版本",
+    "lastTouchedAt": "2026-02-03T03:14:07.080Z",
+    "lastTouchedAt_mock": "配置文件最后修改时间"
+  }
+}
