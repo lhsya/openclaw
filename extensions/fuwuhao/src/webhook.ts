@@ -152,6 +152,67 @@ const buildMessageContext = (message: FuwuhaoMessage) => {
   return { ctx, route, storePath };
 };
 
+// ============================================
+// 后置回调服务配置（Demo）
+// ============================================
+interface CallbackPayload {
+  // 用户信息
+  userId: string;
+  // 消息信息
+  messageId: string;
+  messageType: string;
+  // 用户发送的原始内容
+  userMessage: string;
+  // AI 回复的内容
+  aiReply: string | null;
+  // 时间戳
+  timestamp: number;
+  // 会话信息
+  sessionKey: string;
+  // 是否成功
+  success: boolean;
+  // 错误信息（如果有）
+  error?: string;
+}
+
+// 后置回调服务 URL（可配置）
+const CALLBACK_SERVICE_URL = process.env.FUWUHAO_CALLBACK_URL || "http://localhost:3001/api/fuwuhao/callback";
+
+// 发送结果到后置服务
+const sendToCallbackService = async (payload: CallbackPayload): Promise<void> => {
+  try {
+    console.log("[fuwuhao] 发送后置回调:", {
+      url: CALLBACK_SERVICE_URL,
+      userId: payload.userId,
+      hasReply: !!payload.aiReply,
+    });
+
+    const response = await fetch(CALLBACK_SERVICE_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        // 可以添加认证头
+        // "Authorization": `Bearer ${process.env.CALLBACK_AUTH_TOKEN}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      console.error("[fuwuhao] 后置回调服务返回错误:", {
+        status: response.status,
+        statusText: response.statusText,
+      });
+      return;
+    }
+
+    const result = await response.json().catch(() => ({}));
+    console.log("[fuwuhao] 后置回调成功:", result);
+  } catch (err) {
+    // 后置回调失败不影响主流程，只记录日志
+    console.error("[fuwuhao] 后置回调失败:", err);
+  }
+};
+
 // 处理消息并转发给 Agent
 const handleMessage = async (message: FuwuhaoMessage): Promise<string | null> => {
   const runtime = getWecomRuntime();
@@ -159,13 +220,16 @@ const handleMessage = async (message: FuwuhaoMessage): Promise<string | null> =>
   
   const content = message.Content || message.text?.content || "";
   const userId = message.FromUserName || message.userid || "unknown";
+  const messageId = String(message.MsgId || message.msgid || Date.now());
+  const messageType = message.msgtype || "text";
+  const timestamp = message.CreateTime || Date.now();
   
   console.log("[fuwuhao] 收到消息:", {
-    类型: message.msgtype || "text",
-    消息ID: message.MsgId || message.msgid,
+    类型: messageType,
+    消息ID: messageId,
     内容: content,
     用户ID: userId,
-    时间戳: message.CreateTime
+    时间戳: timestamp
   });
 
   // 构建消息上下文
@@ -232,9 +296,42 @@ const handleMessage = async (message: FuwuhaoMessage): Promise<string | null> =>
       console.log("[fuwuhao] Agent 没有生成回复");
     }
     
+    // ============================================
+    // 后置处理：将结果发送到回调服务
+    // ============================================
+    const callbackPayload: CallbackPayload = {
+      userId,
+      messageId,
+      messageType,
+      userMessage: content,
+      aiReply: responseText,
+      timestamp,
+      sessionKey: route.sessionKey,
+      success: true,
+    };
+    
+    // 异步发送，不阻塞返回
+    void sendToCallbackService(callbackPayload);
+    
     return responseText;
   } catch (err) {
     console.error("[fuwuhao] 消息分发失败:", err);
+    
+    // 即使失败也发送回调（带错误信息）
+    const callbackPayload: CallbackPayload = {
+      userId,
+      messageId,
+      messageType,
+      userMessage: content,
+      aiReply: null,
+      timestamp,
+      sessionKey: route.sessionKey,
+      success: false,
+      error: err instanceof Error ? err.message : String(err),
+    };
+    
+    void sendToCallbackService(callbackPayload);
+    
     return null;
   }
 };
