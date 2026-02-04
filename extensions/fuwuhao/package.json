@@ -1,0 +1,46 @@
+{
+  "name": "fuwuhao",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "简化的企业微信 服务号 接收消息 Demo",
+  "author": "aa",
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "channel": {
+      "id": "fuwuhao",
+      "label": "fuwuhao",
+      "selectionLabel": "WeCom (plugin)",
+      "detailLabel": "WeCom Bot",
+      "docsPath": "/channels/fuwuhao",
+      "docsLabel": "fuwuhao",
+      "blurb": "Enterprise WeCom intelligent bot (API mode) via encrypted webhooks + passive replies.",
+      "aliases": [
+        "wechatwork",
+        "wework",
+        "服务号",
+        "企微",
+        "企业微信"
+      ],
+      "order": 85
+    },
+    "install": {
+      "npmSpec": "@yanhaidao/fuwuhao",
+      "localPath": "extensions/fuwuhao",
+      "defaultChoice": "npm"
+    }
+  },
+  "dependencies": {
+    "fast-xml-parser": "5.3.4",
+    "undici": "^7.20.0",
+    "zod": "^4.3.6"
+  },
+  "peerDependencies": {
+    "openclaw": ">=2026.1.26"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.0",
+    "typescript": "^5.9.3"
+  }
+}
