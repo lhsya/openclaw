@@ -2,15 +2,20 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { getWecomRuntime } from "./runtime.js";
 
 // 简化的消息类型定义
-interface SimpleWecomMessage {
+interface FuwuhaoMessage {
   msgtype?: string;
   msgid?: string;
+  MsgId?: string;
   text?: {
     content?: string;
   };
+  Content?: string;
   chattype?: string;
   chatid?: string;
   userid?: string;
+  FromUserName?: string;
+  ToUserName?: string;
+  CreateTime?: number;
 }
 
 // 简化的账号配置
@@ -37,7 +42,7 @@ const verifySignature = (params: {
 }): boolean => {
   // 这里应该实现真实的签名验证逻辑
   // 为了 demo 简化，直接返回 true
-  console.log("验证签名参数:", params);
+  console.log("[fuwuhao] 验证签名参数:", params);
   return true;
 };
 
@@ -49,8 +54,8 @@ const decryptMessage = (params: {
 }): string => {
   // 这里应该实现真实的解密逻辑
   // 为了 demo 简化，直接返回模拟的解密结果
-  console.log("解密参数:", params);
-  return '{"msgtype":"text","text":{"content":"Hello from WeCom"},"msgid":"123456","userid":"user001"}';
+  console.log("[fuwuhao] 解密参数:", params);
+  return '{"msgtype":"text","Content":"Hello from 服务号","MsgId":"123456","FromUserName":"user001","ToUserName":"gh_test","CreateTime":1234567890}';
 };
 
 // 解析查询参数
@@ -73,23 +78,165 @@ const readBody = async (req: IncomingMessage): Promise<string> => {
   });
 };
 
-// 处理消息的核心逻辑
-const handleMessage = (message: SimpleWecomMessage): void => {
+// 构建消息上下文（类似 LINE 的 ctxPayload）
+const buildMessageContext = (message: FuwuhaoMessage) => {
   const runtime = getWecomRuntime();
+  const cfg = runtime.config.loadConfig();
   
-  console.log("收到消息:", {
-    类型: message.msgtype,
-    消息ID: message.msgid,
-    内容: message.text?.content,
-    聊天类型: message.chattype,
-    聊天ID: message.chatid,
-    用户ID: message.userid
+  const userId = message.FromUserName || message.userid || "unknown";
+  const toUser = message.ToUserName || "unknown";
+  // 要保证唯一
+  const messageId = message.MsgId || message.msgid || `${Date.now()}`;
+  const timestamp = message.CreateTime ? message.CreateTime * 1000 : Date.now();
+  const content = message.Content || message.text?.content || "";
+  
+  // 使用 runtime 解析路由
+  const route = runtime.channel.routing.resolveAgentRoute({
+    cfg,
+    channel: "fuwuhao",
+    accountId: "default",
+    peer: {
+      kind: "dm",
+      id: userId,
+    },
+  });
+  
+  // 获取格式化选项
+  const envelopeOptions = runtime.channel.reply.resolveEnvelopeFormatOptions(cfg);
+  
+  // 获取会话存储路径
+  const storePath = runtime.channel.session.resolveStorePath(cfg.session?.store, {
+    agentId: route.agentId,
+  });
+  
+  // 读取上次会话时间
+  const previousTimestamp = runtime.channel.session.readSessionUpdatedAt({
+    storePath,
+    sessionKey: route.sessionKey,
+  });
+  
+  // 格式化入站消息
+  const body = runtime.channel.reply.formatInboundEnvelope({
+    channel: "fuwuhao",
+    from: userId,
+    timestamp,
+    body: content,
+    chatType: "direct",
+    sender: {
+      id: userId,
+    },
+    previousTimestamp,
+    envelope: envelopeOptions,
+  });
+  
+  // 使用 finalizeInboundContext 构建完整上下文
+  const ctx = runtime.channel.reply.finalizeInboundContext({
+    Body: body,
+    RawBody: content,
+    CommandBody: content,
+    From: `fuwuhao:${userId}`,
+    To: `fuwuhao:${toUser}`,
+    SessionKey: route.sessionKey,
+    AccountId: route.accountId,
+    ChatType: "direct" as const,
+    ConversationLabel: userId,
+    SenderId: userId,
+    Provider: "fuwuhao",
+    Surface: "fuwuhao",
+    MessageSid: messageId,
+    Timestamp: timestamp,
+    OriginatingChannel: "fuwuhao" as const,
+    OriginatingTo: `fuwuhao:${userId}`,
+  });
+  
+  return { ctx, route, storePath };
+};
+
+// 处理消息并转发给 Agent
+const handleMessage = async (message: FuwuhaoMessage): Promise<string | null> => {
+  const runtime = getWecomRuntime();
+  const cfg = runtime.config.loadConfig();
+  
+  const content = message.Content || message.text?.content || "";
+  const userId = message.FromUserName || message.userid || "unknown";
+  
+  console.log("[fuwuhao] 收到消息:", {
+    类型: message.msgtype || "text",
+    消息ID: message.MsgId || message.msgid,
+    内容: content,
+    用户ID: userId,
+    时间戳: message.CreateTime
   });
 
-  // 这里可以添加您的业务逻辑
-  // 例如：调用 AI 模型、存储消息、转发消息等
+  // 构建消息上下文
+  const { ctx, route, storePath } = buildMessageContext(message);
   
-  runtime.log?.(`处理消息: ${message.text?.content || "无文本内容"}`);
+  console.log("[fuwuhao] 路由信息:", {
+    sessionKey: route.sessionKey,
+    agentId: route.agentId,
+    accountId: route.accountId,
+  });
+  
+  // 记录会话元数据
+  void runtime.channel.session.recordSessionMetaFromInbound({
+    storePath,
+    sessionKey: ctx.SessionKey ?? route.sessionKey,
+    ctx,
+  }).catch((err) => {
+    console.log(`[fuwuhao] 记录会话元数据失败: ${String(err)}`);
+  });
+  
+  // 记录频道活动
+  runtime.channel.activity.record({
+    channel: "fuwuhao",
+    accountId: "default",
+    direction: "inbound",
+  });
+  
+  // 调用 OpenClaw 的消息分发系统
+  try {
+    let responseText: string | null = null;
+    
+    // 获取响应前缀配置
+    const messagesConfig = runtime.channel.reply.resolveEffectiveMessagesConfig(cfg, route.agentId);
+    
+    console.log("[fuwuhao] 开始调用 Agent...");
+    
+    const { queuedFinal } = await runtime.channel.reply.dispatchReplyWithBufferedBlockDispatcher({
+      ctx,
+      cfg,
+      dispatcherOptions: {
+        responsePrefix: messagesConfig.responsePrefix,
+        deliver: async (payload) => {
+          // 收集 Agent 的回复
+          if (payload.text) {
+            responseText = payload.text;
+            console.log("[fuwuhao] Agent 回复:", payload.text.slice(0, 200) + (payload.text.length > 200 ? "..." : ""));
+          }
+          
+          // 记录出站活动
+          runtime.channel.activity.record({
+            channel: "fuwuhao",
+            accountId: "default",
+            direction: "outbound",
+          });
+        },
+        onError: (err, info) => {
+          console.error(`[fuwuhao] ${info.kind} 回复失败:`, err);
+        },
+      },
+      replyOptions: {},
+    });
+    
+    if (!queuedFinal) {
+      console.log("[fuwuhao] Agent 没有生成回复");
+    }
+    
+    return responseText;
+  } catch (err) {
+    console.error("[fuwuhao] 消息分发失败:", err);
+    return null;
+  }
 };
 
 // 检查是否是 fuwuhao webhook 路径
@@ -150,7 +297,7 @@ export const handleSimpleWecomWebhook = async (
         res.setHeader("Content-Type", "text/plain; charset=utf-8");
         res.end(decrypted);
         return true;
-      } catch (error) {
+      } catch {
         res.statusCode = 400;
         res.setHeader("Content-Type", "text/plain; charset=utf-8");
         res.end("解密失败");
@@ -161,54 +308,69 @@ export const handleSimpleWecomWebhook = async (
     // POST 请求 - 处理消息
     if (req.method === "POST") {
       const body = await readBody(req);
-      const data = JSON.parse(body);
-      const encrypt = data.encrypt || data.Encrypt || "";
-
-      const isValid = verifySignature({
-        token: mockAccount.token,
-        timestamp,
-        nonce,
-        encrypt,
-        signature
-      });
-
-      if (!isValid) {
-        res.statusCode = 401;
-        res.setHeader("Content-Type", "text/plain; charset=utf-8");
-        res.end("签名验证失败");
-        return true;
-      }
-
-      // 解密消息
+      
+      let message: FuwuhaoMessage;
+      
+      // 尝试解析 JSON 格式
       try {
-        const decrypted = decryptMessage({
-          encodingAESKey: mockAccount.encodingAESKey,
-          receiveId: mockAccount.receiveId,
-          encrypt
-        });
-
-        const message: SimpleWecomMessage = JSON.parse(decrypted);
+        const data = JSON.parse(body);
+        const encrypt = data.encrypt || data.Encrypt || "";
         
-        // 处理消息
-        handleMessage(message);
+        if (encrypt) {
+          // 加密消息，需要解密
+          const isValid = verifySignature({
+            token: mockAccount.token,
+            timestamp,
+            nonce,
+            encrypt,
+            signature
+          });
 
-        // 返回成功响应
-        res.statusCode = 200;
-        res.setHeader("Content-Type", "application/json; charset=utf-8");
-        res.end(JSON.stringify({ success: true }));
-        return true;
-      } catch (error) {
-        console.error("处理消息失败:", error);
-        res.statusCode = 400;
-        res.setHeader("Content-Type", "text/plain; charset=utf-8");
-        res.end("处理消息失败");
-        return true;
+          if (!isValid) {
+            res.statusCode = 401;
+            res.setHeader("Content-Type", "text/plain; charset=utf-8");
+            res.end("签名验证失败");
+            return true;
+          }
+
+          const decrypted = decryptMessage({
+            encodingAESKey: mockAccount.encodingAESKey,
+            receiveId: mockAccount.receiveId,
+            encrypt
+          });
+          message = JSON.parse(decrypted);
+        } else {
+          // 直接是明文 JSON（用于测试）
+          message = data;
+        }
+      } catch {
+        // 可能是 XML 格式，简单处理
+        // 实际项目中需要解析 XML
+        console.log("[fuwuhao] 收到非JSON格式数据，尝试简单解析");
+        message = {
+          msgtype: "text",
+          Content: body,
+          FromUserName: "unknown",
+          MsgId: `${Date.now()}`
+        };
       }
+
+      // 处理消息并获取回复
+      const reply = await handleMessage(message);
+
+      // 返回响应
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      res.end(JSON.stringify({ 
+        success: true,
+        reply: reply || "消息已接收，正在处理中..."
+      }));
+      return true;
     }
 
     return false;
   } catch (error) {
-    console.error("Webhook 处理异常:", error);
+    console.error("[fuwuhao] Webhook 处理异常:", error);
     res.statusCode = 500;
     res.setHeader("Content-Type", "text/plain; charset=utf-8");
     res.end("服务器内部错误");
