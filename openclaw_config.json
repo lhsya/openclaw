@@ -1,4 +1,14 @@
 {
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "enabled_mock": "启用 Telegram 频道",
+      "botToken": "8435692365:AAFsjWGZLtvRrq8lCjSYoM4oJwnLDlNMuDk",
+      "botToken_mock": "Telegram Bot Token（来自 @BotFather）",
+      "dmPolicy": "pairing",
+      "dmPolicy_mock": "私聊策略：pairing 表示需要配对验证才能使用"
+    }
+  },
   "messages": {
     "ackReactionScope": "group-mentions",
     "ackReactionScope_mock": "确认反应范围：只对群组中的@提及做出确认反应"
