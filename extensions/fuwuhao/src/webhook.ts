@@ -271,13 +271,28 @@ const handleMessage = async (message: FuwuhaoMessage): Promise<string | null> =>
       cfg,
       dispatcherOptions: {
         responsePrefix: messagesConfig.responsePrefix,
-        deliver: async (payload: { text?: string }) => {
-          // 收集 Agent 的回复
-          if (payload.text) {
-            responseText = payload.text;
-            console.log("[fuwuhao] Agent 回复:", payload.text.slice(0, 200) + (payload.text.length > 200 ? "..." : ""));
+        deliver: async (
+          payload: { text?: string; mediaUrl?: string; mediaUrls?: string[]; isError?: boolean; channelData?: unknown },
+          info: { kind: string }
+        ) => {
+          console.log(`[fuwuhao] Agent ${info.kind} 回复:`, payload, info);
+
+          if (info.kind === "tool") {
+            // 工具调用结果（如 write、read_file 等），仅记录日志
+            console.log("[fuwuhao] 工具调用结果:", payload);
+          } else if (info.kind === "block") {
+            // 流式分块回复，累积文本
+            if (payload.text) {
+              responseText = payload.text;
+            }
+          } else if (info.kind === "final") {
+            // 最终完整回复
+            if (payload.text) {
+              responseText = payload.text;
+            }
+            console.log("[fuwuhao] 最终回复:", payload);
           }
-          
+
           // 记录出站活动
           runtime.channel.activity.record({
             channel: "fuwuhao",
@@ -296,7 +311,7 @@ const handleMessage = async (message: FuwuhaoMessage): Promise<string | null> =>
       console.log("[fuwuhao] Agent 没有生成回复");
     }
     
-    // ============================================
+      // ============================================
     // 后置处理：将结果发送到回调服务
     // ============================================
     const callbackPayload: CallbackPayload = {
@@ -311,7 +326,7 @@ const handleMessage = async (message: FuwuhaoMessage): Promise<string | null> =>
     };
     
     // 异步发送，不阻塞返回
-    void sendToCallbackService(callbackPayload);
+    // void sendToCallbackService(callbackPayload);
     
     return responseText;
   } catch (err) {
@@ -330,9 +345,139 @@ const handleMessage = async (message: FuwuhaoMessage): Promise<string | null> =>
       error: err instanceof Error ? err.message : String(err),
     };
     
-    void sendToCallbackService(callbackPayload);
+    // void sendToCallbackService(callbackPayload);
     
     return null;
+  }
+};
+
+// ============================================
+// 流式消息处理（SSE 支持）
+// ============================================
+interface StreamChunk {
+  type: "block" | "tool" | "final" | "error" | "done";
+  text?: string;
+  toolName?: string;
+  toolArgs?: Record<string, unknown>;
+  isError?: boolean;
+  timestamp: number;
+}
+
+type StreamCallback = (chunk: StreamChunk) => void;
+
+// 处理消息并流式返回结果
+const handleMessageStream = async (
+  message: FuwuhaoMessage,
+  onChunk: StreamCallback
+): Promise<void> => {
+  const runtime = getWecomRuntime();
+  const cfg = runtime.config.loadConfig();
+  
+  const content = message.Content || message.text?.content || "";
+  const userId = message.FromUserName || message.userid || "unknown";
+  const messageId = String(message.MsgId || message.msgid || Date.now());
+  const messageType = message.msgtype || "text";
+  const timestamp = message.CreateTime || Date.now();
+  
+  console.log("[fuwuhao] 流式处理消息:", {
+    类型: messageType,
+    消息ID: messageId,
+    内容: content,
+    用户ID: userId,
+  });
+
+  // 构建消息上下文
+  const { ctx, route, storePath } = buildMessageContext(message);
+  
+  // 记录会话元数据
+  void runtime.channel.session.recordSessionMetaFromInbound({
+    storePath,
+    sessionKey: ctx.SessionKey ?? route.sessionKey,
+    ctx,
+  }).catch((err: unknown) => {
+    console.log(`[fuwuhao] 记录会话元数据失败: ${String(err)}`);
+  });
+  
+  // 记录频道活动
+  runtime.channel.activity.record({
+    channel: "fuwuhao",
+    accountId: "default",
+    direction: "inbound",
+  });
+  
+  try {
+    // 获取响应前缀配置
+    const messagesConfig = runtime.channel.reply.resolveEffectiveMessagesConfig(cfg, route.agentId);
+    
+    console.log("[fuwuhao] 开始流式调用 Agent...");
+    
+    await runtime.channel.reply.dispatchReplyWithBufferedBlockDispatcher({
+      ctx,
+      cfg,
+      dispatcherOptions: {
+        responsePrefix: messagesConfig.responsePrefix,
+        deliver: async (
+          payload: { text?: string; mediaUrl?: string; mediaUrls?: string[]; isError?: boolean; channelData?: unknown },
+          info: { kind: string }
+        ) => {
+          console.log(`[fuwuhao] 流式 ${info.kind} 回复:`, payload.text?.slice(0, 100));
+
+          if (info.kind === "tool") {
+            // 工具调用结果
+            onChunk({
+              type: "tool",
+              text: payload.text,
+              isError: payload.isError,
+              timestamp: Date.now(),
+            });
+          } else if (info.kind === "block") {
+            // 流式分块回复
+            onChunk({
+              type: "block",
+              text: payload.text,
+              timestamp: Date.now(),
+            });
+          } else if (info.kind === "final") {
+            // 最终完整回复
+            onChunk({
+              type: "final",
+              text: payload.text,
+              timestamp: Date.now(),
+            });
+          }
+
+          // 记录出站活动
+          runtime.channel.activity.record({
+            channel: "fuwuhao",
+            accountId: "default",
+            direction: "outbound",
+          });
+        },
+        onError: (err: unknown, info: { kind: string }) => {
+          console.error(`[fuwuhao] 流式 ${info.kind} 回复失败:`, err);
+          onChunk({
+            type: "error",
+            text: err instanceof Error ? err.message : String(err),
+            timestamp: Date.now(),
+          });
+        },
+      },
+      replyOptions: {},
+    });
+    
+    // 发送完成信号
+    onChunk({
+      type: "done",
+      timestamp: Date.now(),
+    });
+    
+  } catch (err) {
+    console.error("[fuwuhao] 流式消息分发失败:", err);
+    onChunk({
+      type: "error",
+      text: err instanceof Error ? err.message : String(err),
+      timestamp: Date.now(),
+    });
   }
 };
 
@@ -442,7 +587,6 @@ export const handleSimpleWecomWebhook = async (
         }
       } catch {
         // 可能是 XML 格式，简单处理
-        // 实际项目中需要解析 XML
         console.log("[fuwuhao] 收到非JSON格式数据，尝试简单解析");
         message = {
           msgtype: "text",
@@ -452,10 +596,46 @@ export const handleSimpleWecomWebhook = async (
         };
       }
 
-      // 处理消息并获取回复
+      // ============================================
+      // 检查是否请求流式返回（SSE）
+      // ============================================
+      const acceptHeader = req.headers.accept || "";
+      const wantsStream = acceptHeader.includes("text/event-stream") || 
+                          query.get("stream") === "true" ||
+                          query.get("stream") === "1";
+      console.log('adam-sssss-markoint===wantsStreamwantsStreamwantsStream', wantsStream)
+      if (wantsStream) {
+        // 流式返回（Server-Sent Events）
+        console.log("[fuwuhao] 使用流式返回模式 (SSE)");
+        
+        res.statusCode = 200;
+        res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+        res.setHeader("Cache-Control", "no-cache");
+        res.setHeader("Connection", "keep-alive");
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        
+        // 发送初始连接确认
+        res.write(`data: ${JSON.stringify({ type: "connected", timestamp: Date.now() })}\n\n`);
+        
+        await handleMessageStream(message, (chunk) => {
+          // 发送 SSE 格式的数据
+          const sseData = `data: ${JSON.stringify(chunk)}\n\n`;
+          res.write(sseData);
+          
+          // 如果是完成或错误，关闭连接
+          if (chunk.type === "done" || chunk.type === "error") {
+            res.end();
+          }
+        });
+        
+        return true;
+      }
+
+      // ============================================
+      // 普通同步返回
+      // ============================================
       const reply = await handleMessage(message);
 
-      // 返回响应
       res.statusCode = 200;
       res.setHeader("Content-Type", "application/json; charset=utf-8");
       res.end(JSON.stringify({ 

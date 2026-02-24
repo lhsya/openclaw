@@ -1,63 +1,32 @@
 {
-  "name": "@tencent/openclaw-fuwuhao",
+  "name": "fuwuhao",
   "version": "1.0.0",
   "type": "module",
-  "description": "OpenClaw 微信服务号智能机器人插件 - 通过加密 Webhook 接收消息",
-  "author": "Tencent",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/AntDesign/openclaw-fuwuhao"
-  },
-  "keywords": [
-    "openclaw",
-    "wechat",
-    "fuwuhao",
-    "服务号",
-    "微信公众号",
-    "chatbot",
-    "ai"
-  ],
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    }
-  },
-  "files": [
-    "dist",
-    "README.md",
-    "openclaw.plugin.json"
-  ],
-  "scripts": {
-    "build": "tsc",
-    "prepublishOnly": "npm run build",
-    "clean": "rm -rf dist"
-  },
+  "description": "简化的企业微信 服务号 接收消息 Demo",
+  "author": "aa",
   "openclaw": {
     "extensions": [
-      "./dist/index.js"
+      "./index.ts"
     ],
     "channel": {
       "id": "fuwuhao",
-      "label": "服务号",
-      "selectionLabel": "微信服务号 (plugin)",
-      "detailLabel": "微信服务号 Bot",
+      "label": "fuwuhao",
+      "selectionLabel": "WeCom (plugin)",
+      "detailLabel": "WeCom Bot",
       "docsPath": "/channels/fuwuhao",
       "docsLabel": "fuwuhao",
-      "blurb": "微信服务号智能机器人（API 模式）通过加密 Webhook 接收消息。",
+      "blurb": "Enterprise WeCom intelligent bot (API mode) via encrypted webhooks + passive replies.",
       "aliases": [
-        "fuwuhao",
+        "wechatwork",
+        "wework",
         "服务号",
-        "微信公众号",
-        "公众号"
+        "企微",
+        "企业微信"
       ],
       "order": 85
     },
     "install": {
-      "npmSpec": "@tencent/openclaw-fuwuhao",
+      "npmSpec": "@yanhaidao/fuwuhao",
       "localPath": "extensions/fuwuhao",
       "defaultChoice": "npm"
     }
