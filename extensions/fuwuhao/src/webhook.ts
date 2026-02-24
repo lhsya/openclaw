@@ -246,7 +246,7 @@ const handleMessage = async (message: FuwuhaoMessage): Promise<string | null> =>
     storePath,
     sessionKey: ctx.SessionKey ?? route.sessionKey,
     ctx,
-  }).catch((err) => {
+  }).catch((err: unknown) => {
     console.log(`[fuwuhao] 记录会话元数据失败: ${String(err)}`);
   });
   
@@ -271,7 +271,7 @@ const handleMessage = async (message: FuwuhaoMessage): Promise<string | null> =>
       cfg,
       dispatcherOptions: {
         responsePrefix: messagesConfig.responsePrefix,
-        deliver: async (payload) => {
+        deliver: async (payload: { text?: string }) => {
           // 收集 Agent 的回复
           if (payload.text) {
             responseText = payload.text;
@@ -285,7 +285,7 @@ const handleMessage = async (message: FuwuhaoMessage): Promise<string | null> =>
             direction: "outbound",
           });
         },
-        onError: (err, info) => {
+        onError: (err: unknown, info: { kind: string }) => {
           console.error(`[fuwuhao] ${info.kind} 回复失败:`, err);
         },
       },

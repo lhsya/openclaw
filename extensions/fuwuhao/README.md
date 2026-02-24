@@ -1,58 +1,84 @@
-# Simple WeCom Demo
+# @tencent/openclaw-fuwuhao
 
-这是一个简化的企业微信 Webhook 接收消息的 Demo，只保留了核心的消息接收功能。
+OpenClaw 微信服务号智能机器人插件 - 通过加密 Webhook 接收消息并回复。
 
-## 文件结构
+## 安装
 
+```bash
+# 使用 OpenClaw CLI 安装（推荐）
+openclaw plugin install @tencent/openclaw-fuwuhao
+
+# 或者直接使用 npm
+npm install @tencent/openclaw-fuwuhao
 ```
-demo/
-├── simple-plugin.ts      # 插件入口文件
-├── simple-webhook.ts     # 简化的 Webhook 处理器
-├── simple-runtime.ts     # 简化的运行时管理
-└── README.md            # 说明文档
+
+## 配置
+
+在 OpenClaw 配置文件 (`~/.openclaw/openclaw.json`) 中添加：
+
+```json
+{
+  "channels": {
+    "fuwuhao": {
+      "enabled": true,
+      "accounts": [
+        {
+          "accountId": "your-account-id",
+          "appId": "your-app-id",
+          "appSecret": "your-app-secret",
+          "token": "your-token",
+          "encodingAESKey": "your-encoding-aes-key"
+        }
+      ]
+    }
+  }
+}
 ```
 
-## 功能特点
+### 配置说明
 
-- ✅ 接收企业微信 Webhook 消息
-- ✅ 基本的签名验证（模拟实现）
-- ✅ 消息解密（模拟实现）
-- ✅ 消息处理和日志记录
-- ❌ 移除了复杂的状态管理
-- ❌ 移除了消息防抖和去重
-- ❌ 移除了流式处理
-- ❌ 移除了媒体文件处理
+| 字段 | 说明 |
+|------|------|
+| `accountId` | 账号标识（自定义） |
+| `appId` | 微信公众号 AppID |
+| `appSecret` | 微信公众号 AppSecret |
+| `token` | 服务器配置的 Token |
+| `encodingAESKey` | 消息加解密密钥 |
+
+## 微信公众平台配置
+
+1. 登录 [微信公众平台](https://mp.weixin.qq.com/)
+2. 进入 **设置与开发** → **基本配置**
+3. 配置服务器地址：
+   - URL: `http://your-server:19001/fuwuhao`
+   - Token: 与配置文件中的 `token` 一致
+   - EncodingAESKey: 与配置文件中的 `encodingAESKey` 一致
+   - 消息加解密方式: 安全模式
 
 ## 使用方法
 
-1. **配置账号信息**
-   
-   在 `simple-webhook.ts` 中修改 `mockAccount` 对象：
-   ```typescript
-   const mockAccount: SimpleAccount = {
-     token: "your_token_here",              // 企业微信应用的 Token
-     encodingAESKey: "your_encoding_aes_key_here", // 企业微信应用的 EncodingAESKey
-     receiveId: "your_receive_id_here"      // 企业微信应用的 ReceiveId
-   };
-   ```
+配置完成后，启动 OpenClaw Gateway：
 
-2. **实现真实的加密解密**
-   
-   当前的 `verifySignature` 和 `decryptMessage` 函数是模拟实现，实际使用时需要：
-   - 实现真实的企业微信签名验证算法
-   - 实现真实的 AES 解密算法
-   
-3. **添加业务逻辑**
-   
-   在 `handleMessage` 函数中添加您的业务处理逻辑：
-   ```typescript
-   const handleMessage = (message: SimpleWecomMessage): void => {
-     // 在这里添加您的业务逻辑
-     // 例如：调用 AI 模型、存储消息、转发消息等
-   };
-   ```
+```bash
+openclaw gateway run
+```
+
+当用户向公众号发送消息时，插件会自动接收并通过 AI 处理后回复。
+
+## 功能特点
+
+- ✅ 接收微信服务号 Webhook 消息
+- ✅ 消息签名验证
+- ✅ AES 消息加解密
+- ✅ 文本消息处理
+- ✅ 图片/语音/视频消息处理
+- ✅ 自动回复 AI 响应
 
 ## 消息处理流程
+
+```
+用户发送消息 → 微信服务器 → Webhook → OpenClaw Gateway → AI 处理 → 回复用户
+```
 
 1. **URL 验证** (GET 请求)
    - 验证签名
@@ -62,16 +88,40 @@ demo/
 2. **消息接收** (POST 请求)
    - 验证签名
    - 解密消息内容
-   - 调用 `handleMessage` 处理消息
-   - 返回成功响应
+   - 调用 AI 处理
+   - 加密并返回响应
 
-## 注意事项
+## 测试
 
-⚠️ **这是一个简化的 Demo 版本，不适合直接用于生产环境**
+使用 curl 测试接口：
 
-- 签名验证和消息解密使用的是模拟实现
-- 缺少错误处理和重试机制
-- 没有消息去重和防抖功能
-- 没有完整的配置管理
+```bash
+# URL 验证测试
+curl "http://127.0.0.1:19001/fuwuhao?signature=xxx&timestamp=123&nonce=abc&echostr=hello"
 
-如需生产使用，请参考完整版本的实现。
+# 消息发送测试
+curl -X POST "http://127.0.0.1:19001/fuwuhao?msg_signature=xxx&timestamp=123&nonce=abc" \
+  -H "Content-Type: text/xml" \
+  -d '<xml><Encrypt>...</Encrypt></xml>'
+```
+
+## 开发
+
+```bash
+# 安装依赖
+npm install
+
+# 构建
+npm run build
+
+# 本地开发（在 openclaw 项目中）
+openclaw plugin link ./extensions/fuwuhao
+```
+
+## License
+
+MIT
+
+## 作者
+
+Tencent

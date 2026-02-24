@@ -3,6 +3,9 @@ import { emptyPluginConfigSchema } from "openclaw/plugin-sdk";
 
 import { handleSimpleWecomWebhook } from "./src/webhook.js";
 import { setWecomRuntime } from "./src/runtime.js";
+
+// 类型定义
+type NormalizedChatType = "direct" | "group" | "channel";
 // 模拟发送消息
 // curl -X POST "http://127.0.0.1:19001/fuwuhao?timestamp=1234567890&nonce=abc123&msg_signature=test_sig" \
 //   -H "Content-Type: application/json" \
@@ -25,9 +28,14 @@ const fuwuhaoPlugin = {
   id: "fuwuhao",
   meta,
   
+  // 配置 schema
+  config: {
+    schema: {},
+  },
+  
   // 能力声明
   capabilities: {
-    chatTypes: ["direct"] as const,
+    chatTypes: ["direct"] as NormalizedChatType[],
     reactions: false,
     threads: false,
     media: true,
@@ -62,7 +70,8 @@ const index = {
     setWecomRuntime(api.runtime);
     
     // 2. 注册渠道插件
-    api.registerChannel({ plugin: fuwuhaoPlugin });
+    // 使用 as any 绕过严格类型检查（简化版插件不需要完整的 config 适配器）
+    api.registerChannel({ plugin: fuwuhaoPlugin as any });
     
     // 3. 注册 HTTP 处理器
     api.registerHttpHandler(handleSimpleWecomWebhook);
