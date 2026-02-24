@@ -410,8 +410,9 @@ const handleMessageStream = async (
     const messagesConfig = runtime.channel.reply.resolveEffectiveMessagesConfig(cfg, route.agentId);
     
     console.log("[fuwuhao] 开始流式调用 Agent...");
+    console.log("[fuwuhao] ctx:", JSON.stringify(ctx));
     
-    await runtime.channel.reply.dispatchReplyWithBufferedBlockDispatcher({
+    const dispatchResult = await runtime.channel.reply.dispatchReplyWithBufferedBlockDispatcher({
       ctx,
       cfg,
       dispatcherOptions: {
@@ -464,6 +465,8 @@ const handleMessageStream = async (
       },
       replyOptions: {},
     });
+    
+    console.log("[fuwuhao] dispatchReplyWithBufferedBlockDispatcher 完成, 结果:", dispatchResult);
     
     // 发送完成信号
     onChunk({
@@ -610,23 +613,36 @@ export const handleSimpleWecomWebhook = async (
         
         res.statusCode = 200;
         res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
-        res.setHeader("Cache-Control", "no-cache");
+        res.setHeader("Cache-Control", "no-cache, no-transform");
         res.setHeader("Connection", "keep-alive");
+        res.setHeader("X-Accel-Buffering", "no"); // 禁用 nginx 缓冲
         res.setHeader("Access-Control-Allow-Origin", "*");
+        res.flushHeaders(); // 立即发送 headers
         
         // 发送初始连接确认
-        res.write(`data: ${JSON.stringify({ type: "connected", timestamp: Date.now() })}\n\n`);
+        const connectedEvent = `data: ${JSON.stringify({ type: "connected", timestamp: Date.now() })}\n\n`;
+        console.log("[fuwuhao] SSE 发送连接确认:", connectedEvent.trim());
+        res.write(connectedEvent);
         
-        await handleMessageStream(message, (chunk) => {
-          // 发送 SSE 格式的数据
-          const sseData = `data: ${JSON.stringify(chunk)}\n\n`;
-          res.write(sseData);
-          
-          // 如果是完成或错误，关闭连接
-          if (chunk.type === "done" || chunk.type === "error") {
-            res.end();
-          }
-        });
+        try {
+          await handleMessageStream(message, (chunk) => {
+            // 发送 SSE 格式的数据
+            const sseData = `data: ${JSON.stringify(chunk)}\n\n`;
+            console.log("[fuwuhao] SSE 发送数据:", chunk.type, chunk.text?.slice(0, 50));
+            res.write(sseData);
+            
+            // 如果是完成或错误，关闭连接
+            if (chunk.type === "done" || chunk.type === "error") {
+              console.log("[fuwuhao] SSE 连接关闭:", chunk.type);
+              res.end();
+            }
+          });
+        } catch (streamErr) {
+          console.error("[fuwuhao] SSE 流式处理异常:", streamErr);
+          const errorData = `data: ${JSON.stringify({ type: "error", text: String(streamErr), timestamp: Date.now() })}\n\n`;
+          res.write(errorData);
+          res.end();
+        }
         
         return true;
       }
