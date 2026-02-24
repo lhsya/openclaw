@@ -1,6 +1,16 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { getWecomRuntime } from "./runtime.js";
 
+// AgentEventPayload 类型定义（与 src/infra/agent-events.ts 保持一致）
+type AgentEventPayload = {
+  runId: string;
+  seq: number;
+  stream: string;
+  ts: number;
+  data: Record<string, unknown>;
+  sessionKey?: string;
+};
+
 // 简化的消息类型定义
 interface FuwuhaoMessage {
   msgtype?: string;
@@ -87,7 +97,9 @@ const buildMessageContext = (message: FuwuhaoMessage) => {
   const toUser = message.ToUserName || "unknown";
   // 要保证唯一
   const messageId = message.MsgId || message.msgid || `${Date.now()}`;
-  const timestamp = message.CreateTime ? message.CreateTime * 1000 : Date.now();
+  // todo 放开这里
+  // const timestamp = message.CreateTime ? message.CreateTime * 1000 : Date.now();
+  const timestamp = Date.now();
   const content = message.Content || message.text?.content || "";
   
   // 使用 runtime 解析路由
@@ -355,10 +367,12 @@ const handleMessage = async (message: FuwuhaoMessage): Promise<string | null> =>
 // 流式消息处理（SSE 支持）
 // ============================================
 interface StreamChunk {
-  type: "block" | "tool" | "final" | "error" | "done";
+  type: "block" | "tool" | "tool_start" | "tool_update" | "tool_result" | "final" | "error" | "done";
   text?: string;
   toolName?: string;
+  toolCallId?: string;
   toolArgs?: Record<string, unknown>;
+  toolMeta?: Record<string, unknown>;
   isError?: boolean;
   timestamp: number;
 }
@@ -377,8 +391,7 @@ const handleMessageStream = async (
   const userId = message.FromUserName || message.userid || "unknown";
   const messageId = String(message.MsgId || message.msgid || Date.now());
   const messageType = message.msgtype || "text";
-  const timestamp = message.CreateTime || Date.now();
-  
+
   console.log("[fuwuhao] 流式处理消息:", {
     类型: messageType,
     消息ID: messageId,
@@ -405,6 +418,99 @@ const handleMessageStream = async (
     direction: "inbound",
   });
   
+  // 订阅全局 Agent 事件，捕获流式文本和工具调用信息
+  console.log("[fuwuhao] 注册 onAgentEvent 监听器...");
+  let lastEmittedText = ""; // 用于去重，只发送增量文本
+  
+  const unsubscribeAgentEvents = runtime.events.onAgentEvent((evt: AgentEventPayload) => {
+    // 记录所有事件（调试用）
+    console.log(`[fuwuhao] 收到 AgentEvent: stream=${evt.stream}, runId=${evt.runId}`);
+    
+    const data = evt.data as Record<string, unknown>;
+    
+    // ============================================
+    // 处理流式文本（assistant 流）
+    // ============================================
+    if (evt.stream === "assistant") {
+      const delta = data.delta as string | undefined;
+      const text = data.text as string | undefined;
+      
+      // 优先使用 delta（增量文本），如果没有则计算增量
+      let textToSend = delta;
+      if (!textToSend && text && text !== lastEmittedText) {
+        textToSend = text.slice(lastEmittedText.length);
+        lastEmittedText = text;
+      } else if (delta) {
+        lastEmittedText += delta;
+      }
+      
+      if (textToSend) {
+        console.log(`[fuwuhao] 流式文本:`, textToSend.slice(0, 50) + (textToSend.length > 50 ? "..." : ""));
+        onChunk({
+          type: "block",
+          text: textToSend,
+          timestamp: evt.ts,
+        });
+      }
+      return;
+    }
+    
+    // ============================================
+    // 处理工具调用事件（tool 流）
+    // ============================================
+    if (evt.stream === "tool") {
+      const phase = data.phase as string | undefined;
+      const toolName = data.name as string | undefined;
+      const toolCallId = data.toolCallId as string | undefined;
+      
+      console.log(`[fuwuhao] 工具事件 [${phase}]:`, toolName, toolCallId);
+      
+      if (phase === "start") {
+        // 工具开始执行
+        onChunk({
+          type: "tool_start",
+          toolName,
+          toolCallId,
+          toolArgs: data.args as Record<string, unknown> | undefined,
+          toolMeta: data.meta as Record<string, unknown> | undefined,
+          timestamp: evt.ts,
+        });
+      } else if (phase === "update") {
+        // 工具执行中间状态更新
+        onChunk({
+          type: "tool_update",
+          toolName,
+          toolCallId,
+          text: data.text as string | undefined,
+          toolMeta: data.meta as Record<string, unknown> | undefined,
+          timestamp: evt.ts,
+        });
+      } else if (phase === "result") {
+        // 工具执行完成
+        onChunk({
+          type: "tool_result",
+          toolName,
+          toolCallId,
+          text: data.result as string | undefined,
+          isError: data.isError as boolean | undefined,
+          toolMeta: data.meta as Record<string, unknown> | undefined,
+          timestamp: evt.ts,
+        });
+      }
+      return;
+    }
+    
+    // ============================================
+    // 处理生命周期事件（lifecycle 流）
+    // ============================================
+    if (evt.stream === "lifecycle") {
+      const phase = data.phase as string | undefined;
+      console.log(`[fuwuhao] 生命周期事件 [${phase}]`);
+      // 可以在这里处理 start/end/error 事件，例如：
+      // if (phase === "error") { onChunk({ type: "error", text: data.error as string, timestamp: evt.ts }); }
+    }
+  });
+  
   try {
     // 获取响应前缀配置
     const messagesConfig = runtime.channel.reply.resolveEffectiveMessagesConfig(cfg, route.agentId);
@@ -421,7 +527,7 @@ const handleMessageStream = async (
           payload: { text?: string; mediaUrl?: string; mediaUrls?: string[]; isError?: boolean; channelData?: unknown },
           info: { kind: string }
         ) => {
-          console.log(`[fuwuhao] 流式 ${info.kind} 回复:`, payload.text?.slice(0, 100));
+          console.log(`[fuwuhao] 流式 ${info.kind} 回复:`, payload, info);
 
           if (info.kind === "tool") {
             // 工具调用结果
@@ -468,6 +574,9 @@ const handleMessageStream = async (
     
     console.log("[fuwuhao] dispatchReplyWithBufferedBlockDispatcher 完成, 结果:", dispatchResult);
     
+    // 取消订阅 Agent 事件
+    unsubscribeAgentEvents();
+    
     // 发送完成信号
     onChunk({
       type: "done",
@@ -475,6 +584,8 @@ const handleMessageStream = async (
     });
     
   } catch (err) {
+    // 确保在异常时也取消订阅
+    unsubscribeAgentEvents();
     console.error("[fuwuhao] 流式消息分发失败:", err);
     onChunk({
       type: "error",
