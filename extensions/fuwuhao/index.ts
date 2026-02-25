@@ -1,8 +1,8 @@
 import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
 import { emptyPluginConfigSchema } from "openclaw/plugin-sdk";
 
-import { handleSimpleWecomWebhook } from "./src/webhook.js";
-import { setWecomRuntime } from "./src/runtime.js";
+import { handleSimpleWecomWebhook } from "./http/webhook.js";
+import { setWecomRuntime } from "./http/runtime.js";
 
 // 类型定义
 type NormalizedChatType = "direct" | "group" | "channel";
@@ -28,11 +28,6 @@ const fuwuhaoPlugin = {
   id: "fuwuhao",
   meta,
   
-  // 配置 schema
-  config: {
-    schema: {},
-  },
-  
   // 能力声明
   capabilities: {
     chatTypes: ["direct"] as NormalizedChatType[],
@@ -43,17 +38,32 @@ const fuwuhaoPlugin = {
     blockStreaming: false,
   },
   
-  // 启动账号时的处理
-  startAccount: (params: any) => {
-    console.log("启动 服务号 账号:", params.account.accountId);
-    return Promise.resolve();
+  // 配置适配器（必需）
+  // listAccountIds 和 resolveAccount 是 channel plugin 的必需方法
+  // 缺少这两个方法会导致 health check 报错和 Agent 路由失败
+  config: {
+    listAccountIds: (cfg: any) => {
+      const accounts = cfg.channels?.fuwuhao?.accounts;
+      if (accounts && typeof accounts === "object") {
+        return Object.keys(accounts);
+      }
+      // 没有配置账号时，返回默认账号
+      return ["default"];
+    },
+    resolveAccount: (cfg: any, accountId: string) => {
+      const accounts = cfg.channels?.fuwuhao?.accounts;
+      const account = accounts?.[accountId ?? "default"];
+      return account ?? { accountId: accountId ?? "default" };
+    },
   },
   
-  // 停止账号时的处理
-  stopAccount: (params: any) => {
-    console.log("停止 服务号 账号:", params.account.accountId);
-    return Promise.resolve();
-  }
+  // 出站适配器（必需）
+  // 微信服务号是 webhook 模式，不需要主动发送消息
+  // 但 deliveryMode 必须声明
+  outbound: {
+    deliveryMode: "direct" as const,
+    sendText: async () => ({ ok: true }),
+  },
 };
 
 const index = {
