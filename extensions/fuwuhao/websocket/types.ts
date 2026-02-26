@@ -22,10 +22,8 @@
 export interface AGPEnvelope<T = unknown> {
   /** 全局唯一消息 ID（UUID），用于幂等去重 */
   msg_id: string;
-  /** 设备 GUID */
-  guid: string;
   /** 用户账户 ID */
-  user_id: string;
+  token: string;
   /** 消息类型 */
   method: AGPMethod;
   /** 消息载荷 */

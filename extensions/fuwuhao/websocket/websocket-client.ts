@@ -92,7 +92,6 @@ export class FuwuhaoWebSocketClient {
   constructor(config: WebSocketClientConfig, callbacks: WebSocketClientCallbacks = {}) {
     this.config = {
       url: config.url,
-      guid: config.guid,
       userId: config.userId,
       token: config.token,
       reconnectInterval: config.reconnectInterval ?? 3000,
@@ -255,12 +254,10 @@ export class FuwuhaoWebSocketClient {
    * `url.searchParams.set()` 会自动对参数值进行 URL 编码（encodeURIComponent），
    * 避免特殊字符导致的 URL 解析问题。
    *
-   * 最终格式：ws://host:port/?guid={guid}&user_id={user_id}&token={token}
+   * 最终格式：ws://host:port/?token={token}
    */
   private buildConnectionUrl = (): string => {
     const url = new URL(this.config.url);
-    url.searchParams.set("guid", this.config.guid);
-    url.searchParams.set("user_id", this.config.userId);
     if (this.config.token) {
       url.searchParams.set("token", this.config.token);
     }
@@ -566,7 +563,7 @@ export class FuwuhaoWebSocketClient {
    * @description
    * 所有上行消息都通过此方法发送，统一处理：
    * 1. 检查连接状态
-   * 2. 构建 AGP 信封（添加 msg_id、guid、user_id 等公共字段）
+   * 2. 构建 AGP 信封（添加 msg_id等公共字段）
    * 3. JSON 序列化
    * 4. 调用 ws.send() 发送文本帧
    *
@@ -585,8 +582,7 @@ export class FuwuhaoWebSocketClient {
 
     const envelope: AGPEnvelope<T> = {
       msg_id: randomUUID(), // 每条消息生成唯一 UUID，用于服务端去重和日志追踪
-      guid: this.config.guid,
-      user_id: this.config.userId,
+      token: this.config.token || '',
       method,
       payload,
     };

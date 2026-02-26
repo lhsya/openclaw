@@ -24,12 +24,17 @@ const WS_CONFIG = {
 const meta = {
   id: "fuwuhao",
   label: "服务号",
+  /** 选择时的显示文本 */
   selectionLabel: "微信服务号",
   detailLabel: "微信服务号 Bot",
+  /** 文档路径 */
   docsPath: "/channels/fuwuhao",
   docsLabel: "fuwuhao",
+  /** 简介 */
   blurb: "微信服务号智能机器人（API 模式）通过加密 Webhook 接收消息。",
+  /** 图标 */
   systemImage: "message.fill",
+  /** 排序权重 */
   order: 85,
 };
 
@@ -93,9 +98,14 @@ const index = {
     // 使用 as any 绕过严格类型检查（简化版插件不需要完整的 config 适配器）
     api.registerChannel({ plugin: fuwuhaoPlugin as any });
     
-    // 3. 注册 HTTP 处理器
+    // 3. 从配置中读取 token，写入 WS_CONFIG
+    const fuwuhaoConfig = (api.config as any)?.channels?.fuwuhao;
+    if (fuwuhaoConfig?.token) {
+      WS_CONFIG.token = String(fuwuhaoConfig.token);
+    }
+    // 4. 注册 HTTP 处理器
     // api.registerHttpHandler(handleSimpleWecomWebhook);
-    // 3. 初始化并启动 WebSocket 客户端
+    // 4. 初始化并启动 WebSocket 客户端
     wsClient = new FuwuhaoWebSocketClient(WS_CONFIG, {
       onConnected: () => {
         console.log("[fuwuhao] WebSocket 连接成功");
