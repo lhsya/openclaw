@@ -11,7 +11,7 @@ import type { IncomingMessage } from "node:http";
  * @returns URLSearchParams 对象，可通过 get() 方法获取参数值
  * @description 
  * 从请求 URL 中提取查询参数，例如：
- * - /fuwuhao?timestamp=123&nonce=abc
+ * - /tencent-access?timestamp=123&nonce=abc
  * - 可通过 params.get('timestamp') 获取值
  * @example
  * const query = parseQuery(req);
@@ -62,9 +62,9 @@ export const readBody = async (req: IncomingMessage): Promise<string> => {
  * @returns 是否匹配服务号 webhook 路径
  * @description 
  * 支持多种路径格式：
- * - /fuwuhao - 基础路径
- * - /fuwuhao/webhook - 标准 webhook 路径
- * - /fuwuhao/* - 任何以 /fuwuhao/ 开头的路径
+ * - /tencent-access - 基础路径
+ * - /tencent-access/webhook - 标准 webhook 路径
+ * - /tencent-access/* - 任何以 /tencent-access/ 开头的路径
  * 
  * 用于路由判断，确保只处理服务号相关的请求
  * @example
@@ -75,7 +75,7 @@ export const readBody = async (req: IncomingMessage): Promise<string> => {
 export const isFuwuhaoWebhookPath = (url: string): boolean => {
   const pathname = new URL(url, "http://localhost").pathname;
   // 支持多种路径格式
-  return pathname === "/fuwuhao" || 
-         pathname === "/fuwuhao/webhook" ||
-         pathname.startsWith("/fuwuhao/");
+  return pathname === "/tencent-access" || 
+         pathname === "/tencent-access/webhook" ||
+         pathname.startsWith("/tencent-access/");
 };

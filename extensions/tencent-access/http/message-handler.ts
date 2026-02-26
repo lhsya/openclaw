@@ -40,7 +40,7 @@ export const handleMessage = async (message: FuwuhaoMessage): Promise<string | n
   const messageType = message.msgtype || "text";
   const timestamp = message.CreateTime || Date.now();
   
-  console.log("[fuwuhao] 收到消息:", {
+  console.log("[tencent-access] 收到消息:", {
     类型: messageType,
     消息ID: messageId,
     内容: content,
@@ -55,7 +55,7 @@ export const handleMessage = async (message: FuwuhaoMessage): Promise<string | n
   // 返回：ctx（消息上下文）、route（路由信息）、storePath（存储路径）
   const { ctx, route, storePath } = buildMessageContext(message);
   
-  console.log("[fuwuhao] 路由信息:", {
+  console.log("[tencent-access] 路由信息:", {
     sessionKey: route.sessionKey,
     agentId: route.agentId,
     accountId: route.accountId,
@@ -72,7 +72,7 @@ export const handleMessage = async (message: FuwuhaoMessage): Promise<string | n
     sessionKey: ctx.SessionKey as string ?? route.sessionKey,  // 会话键
     ctx,                                                // 消息上下文
   }).catch((err: unknown) => {
-    console.log(`[fuwuhao] 记录会话元数据失败: ${String(err)}`);
+    console.log(`[tencent-access] 记录会话元数据失败: ${String(err)}`);
   });
   
   // ============================================
@@ -81,7 +81,7 @@ export const handleMessage = async (message: FuwuhaoMessage): Promise<string | n
   // runtime.channel.activity.record 记录频道的活动统计
   // 用于监控、分析、计费等场景
   runtime.channel.activity.record({
-    channel: "fuwuhao",      // 频道标识
+    channel: "tencent-access",      // 频道标识
     accountId: "default",    // 账号 ID
     direction: "inbound",    // 方向：inbound=入站（用户发送），outbound=出站（Bot 回复）
   });
@@ -96,7 +96,7 @@ export const handleMessage = async (message: FuwuhaoMessage): Promise<string | n
     // runtime.channel.reply.resolveEffectiveMessagesConfig 解析消息配置
     const messagesConfig = runtime.channel.reply.resolveEffectiveMessagesConfig(cfg, route.agentId);
     
-    console.log("[fuwuhao] 开始调用 Agent...");
+    console.log("[tencent-access] 开始调用 Agent...");
     
     // ============================================
     // runtime.channel.reply.dispatchReplyWithBufferedBlockDispatcher
@@ -130,7 +130,7 @@ export const handleMessage = async (message: FuwuhaoMessage): Promise<string | n
           payload: { text?: string; mediaUrl?: string; mediaUrls?: string[]; isError?: boolean; channelData?: unknown },
           info: { kind: string }
         ) => {
-          console.log(`[fuwuhao] Agent ${info.kind} 回复:`, payload, info);
+          console.log(`[tencent-access] Agent ${info.kind} 回复:`, payload, info);
 
           if (info.kind === "tool") {
             // ============================================
@@ -138,7 +138,7 @@ export const handleMessage = async (message: FuwuhaoMessage): Promise<string | n
             // ============================================
             // Agent 调用工具（如 write、read_file 等）后的结果
             // 通常不需要直接返回给用户，仅记录日志
-            console.log("[fuwuhao] 工具调用结果:", payload);
+            console.log("[tencent-access] 工具调用结果:", payload);
           } else if (info.kind === "block") {
             // ============================================
             // 流式分块回复
@@ -157,25 +157,25 @@ export const handleMessage = async (message: FuwuhaoMessage): Promise<string | n
             if (payload.text) {
               responseText = payload.text;
             }
-            console.log("[fuwuhao] 最终回复:", payload);
+            console.log("[tencent-access] 最终回复:", payload);
           }
 
           // 记录出站活动统计（Bot 回复）
           runtime.channel.activity.record({
-            channel: "fuwuhao",
+            channel: "tencent-access",
             accountId: "default",
             direction: "outbound",  // 出站：Bot 发送给用户
           });
         },
         onError: (err: unknown, info: { kind: string }) => {
-          console.error(`[fuwuhao] ${info.kind} 回复失败:`, err);
+          console.error(`[tencent-access] ${info.kind} 回复失败:`, err);
         },
       },
       replyOptions: {},
     });
     
     if (!queuedFinal) {
-      console.log("[fuwuhao] Agent 没有生成回复");
+      console.log("[tencent-access] Agent 没有生成回复");
     }
     
     // ============================================
@@ -197,7 +197,7 @@ export const handleMessage = async (message: FuwuhaoMessage): Promise<string | n
     
     return responseText;
   } catch (err) {
-    console.error("[fuwuhao] 消息分发失败:", err);
+    console.error("[tencent-access] 消息分发失败:", err);
     
     // 即使失败也发送回调（带错误信息）
     const callbackPayload: CallbackPayload = {
@@ -261,7 +261,7 @@ export const handleMessageStream = async (
   const messageId = String(message.MsgId || message.msgid || Date.now());
   const messageType = message.msgtype || "text";
 
-  console.log("[fuwuhao] 流式处理消息:", {
+  console.log("[tencent-access] 流式处理消息:", {
     类型: messageType,
     消息ID: messageId,
     内容: content,
@@ -281,14 +281,14 @@ export const handleMessageStream = async (
     sessionKey: ctx.SessionKey as string ?? route.sessionKey,
     ctx,
   }).catch((err: unknown) => {
-    console.log(`[fuwuhao] 记录会话元数据失败: ${String(err)}`);
+    console.log(`[tencent-access] 记录会话元数据失败: ${String(err)}`);
   });
   
   // ============================================
   // 4. 记录频道活动统计
   // ============================================
   runtime.channel.activity.record({
-    channel: "fuwuhao",
+    channel: "tencent-access",
     accountId: "default",
     direction: "inbound",
   });
@@ -303,12 +303,12 @@ export const handleMessageStream = async (
   // - assistant: 助手流（流式文本输出）
   // - tool: 工具流（工具调用的各个阶段）
   // - lifecycle: 生命周期流（start/end/error 等）
-  console.log("[fuwuhao] 注册 onAgentEvent 监听器...");
+  console.log("[tencent-access] 注册 onAgentEvent 监听器...");
   let lastEmittedText = ""; // 用于去重，只发送增量文本
   
   const unsubscribeAgentEvents = runtime.events.onAgentEvent((evt: AgentEventPayload) => {
     // 记录所有事件（调试用）
-    console.log(`[fuwuhao] 收到 AgentEvent: stream=${evt.stream}, runId=${evt.runId}`);
+    console.log(`[tencent-access] 收到 AgentEvent: stream=${evt.stream}, runId=${evt.runId}`);
     
     const data = evt.data as Record<string, unknown>;
     
@@ -333,7 +333,7 @@ export const handleMessageStream = async (
       }
       
       if (textToSend) {
-        console.log(`[fuwuhao] 流式文本:`, textToSend.slice(0, 50) + (textToSend.length > 50 ? "..." : ""));
+        console.log(`[tencent-access] 流式文本:`, textToSend.slice(0, 50) + (textToSend.length > 50 ? "..." : ""));
         // 通过 onChunk 回调发送增量文本
         onChunk({
           type: "block",
@@ -356,7 +356,7 @@ export const handleMessageStream = async (
       const toolName = data.name as string | undefined;
       const toolCallId = data.toolCallId as string | undefined;
       
-      console.log(`[fuwuhao] 工具事件 [${phase}]:`, toolName, toolCallId);
+      console.log(`[tencent-access] 工具事件 [${phase}]:`, toolName, toolCallId);
       
       if (phase === "start") {
         // ============================================
@@ -409,7 +409,7 @@ export const handleMessageStream = async (
     // data.phase: 生命周期阶段（start/end/error）
     if (evt.stream === "lifecycle") {
       const phase = data.phase as string | undefined;
-      console.log(`[fuwuhao] 生命周期事件 [${phase}]`);
+      console.log(`[tencent-access] 生命周期事件 [${phase}]`);
       // 可以在这里处理 start/end/error 事件，例如：
       // if (phase === "error") { 
       //   onChunk({ type: "error", text: data.error as string, timestamp: evt.ts }); 
@@ -421,8 +421,8 @@ export const handleMessageStream = async (
     // 获取响应前缀配置
     const messagesConfig = runtime.channel.reply.resolveEffectiveMessagesConfig(cfg, route.agentId);
     
-    console.log("[fuwuhao] 开始流式调用 Agent...");
-    console.log("[fuwuhao] ctx:", JSON.stringify(ctx));
+    console.log("[tencent-access] 开始流式调用 Agent...");
+    console.log("[tencent-access] ctx:", JSON.stringify(ctx));
     
     const dispatchResult = await runtime.channel.reply.dispatchReplyWithBufferedBlockDispatcher({
       ctx,
@@ -433,7 +433,7 @@ export const handleMessageStream = async (
           payload: { text?: string; mediaUrl?: string; mediaUrls?: string[]; isError?: boolean; channelData?: unknown },
           info: { kind: string }
         ) => {
-          console.log(`[fuwuhao] 流式 ${info.kind} 回复:`, payload, info);
+          console.log(`[tencent-access] 流式 ${info.kind} 回复:`, payload, info);
 
           if (info.kind === "tool") {
             // 工具调用结果
@@ -461,13 +461,13 @@ export const handleMessageStream = async (
 
           // 记录出站活动
           runtime.channel.activity.record({
-            channel: "fuwuhao",
+            channel: "tencent-access",
             accountId: "default",
             direction: "outbound",
           });
         },
         onError: (err: unknown, info: { kind: string }) => {
-          console.error(`[fuwuhao] 流式 ${info.kind} 回复失败:`, err);
+          console.error(`[tencent-access] 流式 ${info.kind} 回复失败:`, err);
           onChunk({
             type: "error",
             text: err instanceof Error ? err.message : String(err),
@@ -478,7 +478,7 @@ export const handleMessageStream = async (
       replyOptions: {},
     });
     
-    console.log("[fuwuhao] dispatchReplyWithBufferedBlockDispatcher 完成, 结果:", dispatchResult);
+    console.log("[tencent-access] dispatchReplyWithBufferedBlockDispatcher 完成, 结果:", dispatchResult);
     
     // 取消订阅 Agent 事件
     unsubscribeAgentEvents();
@@ -492,7 +492,7 @@ export const handleMessageStream = async (
   } catch (err) {
     // 确保在异常时也取消订阅
     unsubscribeAgentEvents();
-    console.error("[fuwuhao] 流式消息分发失败:", err);
+    console.error("[tencent-access] 流式消息分发失败:", err);
     onChunk({
       type: "error",
       text: err instanceof Error ? err.message : String(err),

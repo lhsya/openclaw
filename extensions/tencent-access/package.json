@@ -1,5 +1,5 @@
 {
-  "name": "fuwuhao",
+  "name": "tencent-access",
   "version": "1.0.0",
   "type": "module",
   "description": "简化的企业微信 服务号 接收消息 Demo",
@@ -9,12 +9,12 @@
       "./index.ts"
     ],
     "channel": {
-      "id": "fuwuhao",
-      "label": "fuwuhao",
+      "id": "tencent-access",
+      "label": "tencent-access",
       "selectionLabel": "WeCom (plugin)",
       "detailLabel": "WeCom Bot",
-      "docsPath": "/channels/fuwuhao",
-      "docsLabel": "fuwuhao",
+      "docsPath": "/channels/tencent-access",
+      "docsLabel": "tencent-access",
       "blurb": "Enterprise WeCom intelligent bot (API mode) via encrypted webhooks + passive replies.",
       "aliases": [
         "wechatwork",
@@ -26,8 +26,8 @@
       "order": 85
     },
     "install": {
-      "npmSpec": "@yanhaidao/fuwuhao",
-      "localPath": "extensions/fuwuhao",
+      "npmSpec": "@yanhaidao/tencent-access",
+      "localPath": "extensions/tencent-access",
       "defaultChoice": "npm"
     }
   },

@@ -108,7 +108,7 @@ export const handlePrompt = async (
   const userId = message.user_id;
 
   const textContent = extractTextFromContent(payload.content);
-  console.log("[fuwuhao-ws] 收到 prompt:", {
+  console.log("[tencent-access-ws] 收到 prompt:", {
     sessionId,
     promptId,
     userId,
@@ -159,7 +159,7 @@ export const handlePrompt = async (
      */
     const { ctx, route, storePath } = buildWebSocketMessageContext(payload, userId);
 
-    console.log("[fuwuhao-ws] 路由信息:", {
+    console.log("[tencent-access-ws] 路由信息:", {
       sessionKey: route.sessionKey,
       agentId: route.agentId,
       accountId: route.accountId,
@@ -186,7 +186,7 @@ export const handlePrompt = async (
         ctx,
       })
       .catch((err: unknown) => {
-        console.log(`[fuwuhao-ws] 记录会话元数据失败: ${String(err)}`);
+        console.log(`[tencent-access-ws] 记录会话元数据失败: ${String(err)}`);
       });
 
     // ============================================
@@ -198,7 +198,7 @@ export const handlePrompt = async (
      * 这些统计数据用于 OpenClaw 控制台的活动监控面板。
      */
     runtime.channel.activity.record({
-      channel: "fuwuhao",
+      channel: "tencent-access",
       accountId: "default",
       direction: "inbound",
     });
@@ -403,7 +403,7 @@ export const handlePrompt = async (
         ) => {
           if (turn.cancelled) return;
 
-          console.log(`[fuwuhao-ws] Agent ${info.kind} 回复:`, payload.text?.slice(0, 50));
+          console.log(`[tencent-access-ws] Agent ${info.kind} 回复:`, payload.text?.slice(0, 50));
 
           // 保存最终回复文本，用于构建 session.promptResponse 的 content
           if (info.kind === "final" && payload.text) {
@@ -412,13 +412,13 @@ export const handlePrompt = async (
 
           // 记录出站活动统计（每次 deliver 都算一次出站）
           runtime.channel.activity.record({
-            channel: "fuwuhao",
+            channel: "tencent-access",
             accountId: "default",
             direction: "outbound",
           });
         },
         onError: (err: unknown, info: { kind: string }) => {
-          console.error(`[fuwuhao-ws] Agent ${info.kind} 回复失败:`, err);
+          console.error(`[tencent-access-ws] Agent ${info.kind} 回复失败:`, err);
         },
       },
       replyOptions: {},
@@ -454,12 +454,12 @@ export const handlePrompt = async (
       content: responseContent,
     });
 
-    console.log("[fuwuhao-ws] prompt 处理完成:", { promptId, hasReply: !!finalText });
+    console.log("[tencent-access-ws] prompt 处理完成:", { promptId, hasReply: !!finalText });
   } catch (err) {
     // ============================================
     // 错误处理
     // ============================================
-    console.error("[fuwuhao-ws] prompt 处理失败:", err);
+    console.error("[tencent-access-ws] prompt 处理失败:", err);
 
     // 清理活跃 Turn（取消事件订阅，从 Map 中移除）
     const currentTurn = activeTurns.get(promptId);
@@ -497,11 +497,11 @@ export const handleCancel = (
 ): void => {
   const { session_id: sessionId, prompt_id: promptId } = message.payload;
 
-  console.log("[fuwuhao-ws] 收到 cancel:", { sessionId, promptId });
+  console.log("[tencent-access-ws] 收到 cancel:", { sessionId, promptId });
 
   const turn = activeTurns.get(promptId);
   if (!turn) {
-    console.warn(`[fuwuhao-ws] 未找到活跃 Turn: ${promptId}`);
+    console.warn(`[tencent-access-ws] 未找到活跃 Turn: ${promptId}`);
     // 即使找不到对应 Turn（可能已处理完毕），也发送 cancelled 响应
     // 确保服务端收到明确的结束信号
     client.sendPromptResponse({
@@ -528,7 +528,7 @@ export const handleCancel = (
     stop_reason: "cancelled",
   });
 
-  console.log("[fuwuhao-ws] Turn 已取消:", promptId);
+  console.log("[tencent-access-ws] Turn 已取消:", promptId);
 };
 
 // ============================================

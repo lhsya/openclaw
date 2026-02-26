@@ -13,8 +13,8 @@ let wsClient: FuwuhaoWebSocketClient | null = null;
 // WebSocket 配置（从环境变量读取）
 const WS_CONFIG = {
   url: "ws://21.0.62.97:8080/",
-  guid: "fuwuhao_device_001",
-  userId: "fuwuhao_user_001",
+  guid: "tencent-access_device_001",
+  userId: "tencent-access_user_001",
   token: "",
   reconnectInterval: 3000,
   maxReconnectAttempts: 0,
@@ -22,16 +22,16 @@ const WS_CONFIG = {
 };
 // 渠道元数据
 const meta = {
-  id: "fuwuhao",
-  label: "服务号",
+  id: "tencent-access",
+  label: "腾讯通路",
   /** 选择时的显示文本 */
-  selectionLabel: "微信服务号",
-  detailLabel: "微信服务号 Bot",
+  selectionLabel: "腾讯通路",
+  detailLabel: "腾讯通路",
   /** 文档路径 */
-  docsPath: "/channels/fuwuhao",
-  docsLabel: "fuwuhao",
+  docsPath: "/channels/tencent-access",
+  docsLabel: "tencent-access",
   /** 简介 */
-  blurb: "微信服务号智能机器人（API 模式）通过加密 Webhook 接收消息。",
+  blurb: "通用通路",
   /** 图标 */
   systemImage: "message.fill",
   /** 排序权重 */
@@ -39,8 +39,8 @@ const meta = {
 };
 
 // 渠道插件
-const fuwuhaoPlugin = {
-  id: "fuwuhao",
+const tencentAccessPlugin = {
+  id: "tencent-access",
   meta,
   
   // 能力声明
@@ -58,7 +58,7 @@ const fuwuhaoPlugin = {
   // 缺少这两个方法会导致 health check 报错和 Agent 路由失败
   config: {
     listAccountIds: (cfg: any) => {
-      const accounts = cfg.channels?.fuwuhao?.accounts;
+      const accounts = cfg.channels?.["tencent-access"]?.accounts;
       if (accounts && typeof accounts === "object") {
         return Object.keys(accounts);
       }
@@ -66,7 +66,7 @@ const fuwuhaoPlugin = {
       return ["default"];
     },
     resolveAccount: (cfg: any, accountId: string) => {
-      const accounts = cfg.channels?.fuwuhao?.accounts;
+      const accounts = cfg.channels?.["tencent-access"]?.accounts;
       const account = accounts?.[accountId ?? "default"];
       return account ?? { accountId: accountId ?? "default" };
     },
@@ -82,9 +82,9 @@ const fuwuhaoPlugin = {
 };
 
 const index = {
-  id: "fuwuhao",
-  name: "微信服务号",
-  description: "微信服务号 WebSocket 接收消息插件",
+  id: "tencent-access",
+  name: "通用通路插件",
+  description: "腾讯通用通路插件",
   configSchema: emptyPluginConfigSchema(),
   
   /**
@@ -96,39 +96,39 @@ const index = {
     
     // 2. 注册渠道插件
     // 使用 as any 绕过严格类型检查（简化版插件不需要完整的 config 适配器）
-    api.registerChannel({ plugin: fuwuhaoPlugin as any });
+    api.registerChannel({ plugin: tencentAccessPlugin as any });
     
     // 3. 从配置中读取 token，写入 WS_CONFIG
-    const fuwuhaoConfig = (api.config as any)?.channels?.fuwuhao;
-    if (fuwuhaoConfig?.token) {
-      WS_CONFIG.token = String(fuwuhaoConfig.token);
+    const tencentAccessConfig = (api.config as any)?.channels?.["tencent-access"];
+    if (tencentAccessConfig?.token) {
+      WS_CONFIG.token = String(tencentAccessConfig.token);
     }
     // 4. 注册 HTTP 处理器
     // api.registerHttpHandler(handleSimpleWecomWebhook);
     // 4. 初始化并启动 WebSocket 客户端
     wsClient = new FuwuhaoWebSocketClient(WS_CONFIG, {
       onConnected: () => {
-        console.log("[fuwuhao] WebSocket 连接成功");
+        console.log("[tencent-access] WebSocket 连接成功");
       },
       onDisconnected: (reason) => {
-        console.log(`[fuwuhao] WebSocket 连接断开: ${reason}`);
+        console.log(`[tencent-access] WebSocket 连接断开: ${reason}`);
       },
       onPrompt: (message) => {
         // 异步处理，不阻塞 WebSocket 消息循环
         void handlePrompt(message, wsClient!).catch((err) => {
-          console.error("[fuwuhao] 处理 prompt 失败:", err);
+          console.error("[tencent-access] 处理 prompt 失败:", err);
         });
       },
       onCancel: (message) => {
         handleCancel(message, wsClient!);
       },
       onError: (error) => {
-        console.error("[fuwuhao] WebSocket 错误:", error.message);
+        console.error("[tencent-access] WebSocket 错误:", error.message);
       },
     });
     wsClient.start();
 
-    console.log("微信服务号插件已注册");
+    console.log("[tencent-access] 微信服务号插件已注册");
   },
 };
 

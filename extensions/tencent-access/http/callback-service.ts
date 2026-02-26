@@ -9,10 +9,10 @@ import type { CallbackPayload } from "./types.js";
 /**
  * 后置回调服务的 URL 地址
  * @description 
- * 可通过环境变量 FUWUHAO_CALLBACK_URL 配置
- * 默认值：http://localhost:3001/api/fuwuhao/callback
+ * 可通过环境变量 TENCENT_ACCESS_CALLBACK_URL 配置
+ * 默认值：http://localhost:3001/api/tencent-access/callback
  */
-const CALLBACK_SERVICE_URL = process.env.FUWUHAO_CALLBACK_URL || "http://localhost:3001/api/fuwuhao/callback";
+const CALLBACK_SERVICE_URL = process.env.TENCENT_ACCESS_CALLBACK_URL || "http://localhost:3001/api/tencent-access/callback";
 
 /**
  * 发送消息处理结果到后置回调服务
@@ -40,7 +40,7 @@ const CALLBACK_SERVICE_URL = process.env.FUWUHAO_CALLBACK_URL || "http://localho
  */
 export const sendToCallbackService = async (payload: CallbackPayload): Promise<void> => {
   try {
-    console.log("[fuwuhao] 发送后置回调:", {
+    console.log("[tencent-access] 发送后置回调:", {
       url: CALLBACK_SERVICE_URL,
       userId: payload.userId,
       hasReply: !!payload.aiReply,
@@ -57,7 +57,7 @@ export const sendToCallbackService = async (payload: CallbackPayload): Promise<v
     });
 
     if (!response.ok) {
-      console.error("[fuwuhao] 后置回调服务返回错误:", {
+      console.error("[tencent-access] 后置回调服务返回错误:", {
         status: response.status,
         statusText: response.statusText,
       });
@@ -65,9 +65,9 @@ export const sendToCallbackService = async (payload: CallbackPayload): Promise<v
     }
 
     const result = await response.json().catch(() => ({}));
-    console.log("[fuwuhao] 后置回调成功:", result);
+    console.log("[tencent-access] 后置回调成功:", result);
   } catch (err) {
     // 后置回调失败不影响主流程，只记录日志
-    console.error("[fuwuhao] 后置回调失败:", err);
+    console.error("[tencent-access] 后置回调失败:", err);
   }
 };

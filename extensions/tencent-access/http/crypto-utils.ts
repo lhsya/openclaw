@@ -53,7 +53,7 @@ export const verifySignature = (params: VerifySignatureParams): boolean => {
   // const hash = crypto.createHash('sha1').update(str).digest('hex');
   // return hash === params.signature;
   
-  console.log("[fuwuhao] 验证签名参数:", params);
+  console.log("[tencent-access] 验证签名参数:", params);
   return true; // 简化实现，直接返回 true
 };
 
@@ -90,7 +90,7 @@ export const decryptMessage = (params: DecryptMessageParams): string => {
   // if (receiveId !== params.receiveId) throw new Error('receiveId mismatch');
   // return message;
   
-  console.log("[fuwuhao] 解密参数:", params);
+  console.log("[tencent-access] 解密参数:", params);
   // 返回模拟的解密结果（标准微信消息格式）
   return '{"msgtype":"text","Content":"Hello from 服务号","MsgId":"123456","FromUserName":"user001","ToUserName":"gh_test","CreateTime":1234567890}';
 };

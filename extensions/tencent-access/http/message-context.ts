@@ -74,7 +74,7 @@ export const buildMessageContext = (message: FuwuhaoMessage): MessageContext => 
   // 根据频道、账号、对话类型等信息，决定使用哪个 Agent 处理消息
   const route = runtime.channel.routing.resolveAgentRoute({
     cfg,                    // 全局配置
-    channel: "fuwuhao",     // 频道标识
+    channel: "tencent-access",     // 频道标识
     accountId: "default",   // 账号 ID（支持多账号场景）
     peer: {
       kind: "dm",           // 对话类型：dm=私聊，group=群聊
@@ -120,7 +120,7 @@ export const buildMessageContext = (message: FuwuhaoMessage): MessageContext => 
   // runtime.channel.reply.formatInboundEnvelope 将原始消息格式化为标准格式
   // 添加时间戳、发送者信息、格式化选项等
   const body = runtime.channel.reply.formatInboundEnvelope({
-    channel: "fuwuhao",         // 频道标识
+    channel: "tencent-access",         // 频道标识
     from: userId,               // 发送者 ID
     timestamp,                  // 消息时间戳
     body: content,              // 消息内容
@@ -142,19 +142,19 @@ export const buildMessageContext = (message: FuwuhaoMessage): MessageContext => 
     Body: body,                                 // 格式化后的消息体
     RawBody: content,                           // 原始消息内容
     CommandBody: content,                       // 命令体（用于解析命令）
-    From: `fuwuhao:${userId}`,                  // 发送者标识（带频道前缀）
-    To: `fuwuhao:${toUser}`,                    // 接收者标识
+    From: `tencent-access:${userId}`,                  // 发送者标识（带频道前缀）
+    To: `tencent-access:${toUser}`,                    // 接收者标识
     SessionKey: route.sessionKey,               // 会话键
     AccountId: route.accountId,                 // 账号 ID
     ChatType: "direct" as const,                // 对话类型
     ConversationLabel: userId,                  // 对话标签（用于显示）
     SenderId: userId,                           // 发送者 ID
-    Provider: "fuwuhao",                        // 提供商标识
-    Surface: "fuwuhao",                         // 界面标识
+    Provider: "tencent-access",                        // 提供商标识
+    Surface: "tencent-access",                         // 界面标识
     MessageSid: messageId,                      // 消息唯一标识
     Timestamp: timestamp,                       // 时间戳
-    OriginatingChannel: "fuwuhao" as const,     // 原始频道
-    OriginatingTo: `fuwuhao:${userId}`,         // 原始接收者
+    OriginatingChannel: "tencent-access" as const,     // 原始频道
+    OriginatingTo: `tencent-access:${userId}`,         // 原始接收者
   });
   // ctx 包含了 Agent 处理消息所需的所有信息
   

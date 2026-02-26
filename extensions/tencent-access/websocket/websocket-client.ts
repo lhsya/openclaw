@@ -110,7 +110,7 @@ export class FuwuhaoWebSocketClient {
    */
   start = (): void => {
     if (this.state === "connected" || this.state === "connecting") {
-      console.log("[fuwuhao-ws] 已连接或正在连接，跳过");
+      console.log("[tencent-access-ws] 已连接或正在连接，跳过");
       return;
     }
     this.connect();
@@ -127,7 +127,7 @@ export class FuwuhaoWebSocketClient {
    * 4. 关闭 WebSocket 连接
    */
   stop = (): void => {
-    console.log("[fuwuhao-ws] 正在停止...");
+    console.log("[tencent-access-ws] 正在停止...");
     this.state = "disconnected";
     this.clearReconnectTimer();
     this.clearHeartbeat();
@@ -138,7 +138,7 @@ export class FuwuhaoWebSocketClient {
       this.ws.close();
       this.ws = null;
     }
-    console.log("[fuwuhao-ws] 已停止");
+    console.log("[tencent-access-ws] 已停止");
   };
 
   /**
@@ -232,7 +232,7 @@ export class FuwuhaoWebSocketClient {
   private connect = (): void => {
     this.state = "connecting";
     const wsUrl = this.buildConnectionUrl();
-    console.log(`[fuwuhao-ws] 正在连接: ${wsUrl}`);
+    console.log(`[tencent-access-ws] 正在连接: ${wsUrl}`);
 
     try {
       // new WebSocket(url) 立即返回，不会阻塞
@@ -242,7 +242,7 @@ export class FuwuhaoWebSocketClient {
     } catch (error) {
       // 同步错误（如 URL 格式非法）会在这里捕获
       // 异步连接失败（如服务端拒绝）会触发 "error" 事件
-      console.error("[fuwuhao-ws] 创建连接失败:", error);
+      console.error("[tencent-access-ws] 创建连接失败:", error);
       this.handleConnectionError(error instanceof Error ? error : new Error(String(error)));
     }
   };
@@ -306,7 +306,7 @@ export class FuwuhaoWebSocketClient {
    * 4. 触发 onConnected 回调
    */
   private handleOpen = (): void => {
-    console.log("[fuwuhao-ws] 连接成功");
+    console.log("[tencent-access-ws] 连接成功");
     this.state = "connected";
     this.reconnectAttempts = 0;
     this.startHeartbeat();
@@ -337,12 +337,12 @@ export class FuwuhaoWebSocketClient {
       // 消息去重：同一个 msg_id 只处理一次
       // 网络不稳定时服务端可能重发消息，通过 msg_id 避免重复处理
       if (this.processedMsgIds.has(envelope.msg_id)) {
-        console.log(`[fuwuhao-ws] 重复消息，跳过: ${envelope.msg_id}`);
+        console.log(`[tencent-access-ws] 重复消息，跳过: ${envelope.msg_id}`);
         return;
       }
       this.processedMsgIds.add(envelope.msg_id);
 
-      console.log(`[fuwuhao-ws] 收到消息: method=${envelope.method}, msg_id=${envelope.msg_id}`);
+      console.log(`[tencent-access-ws] 收到消息: method=${envelope.method}, msg_id=${envelope.msg_id}`);
 
       // 根据 method 字段分发消息到对应的业务处理回调
       switch (envelope.method) {
@@ -355,10 +355,10 @@ export class FuwuhaoWebSocketClient {
           this.callbacks.onCancel?.(envelope as CancelMessage);
           break;
         default:
-          console.warn(`[fuwuhao-ws] 未知消息类型: ${envelope.method}`);
+          console.warn(`[tencent-access-ws] 未知消息类型: ${envelope.method}`);
       }
     } catch (error) {
-      console.error("[fuwuhao-ws] 消息解析失败:", error, "原始数据:", data);
+      console.error("[tencent-access-ws] 消息解析失败:", error, "原始数据:", data);
       this.callbacks.onError?.(
         error instanceof Error ? error : new Error(`消息解析失败: ${String(error)}`)
       );
@@ -386,7 +386,7 @@ export class FuwuhaoWebSocketClient {
     // Buffer.toString() 将 Buffer 转为 UTF-8 字符串
     // 如果 reason 为空 Buffer，toString() 返回空字符串，此时用 code 作为描述
     const reasonStr = reason.toString() || `code=${code}`;
-    console.log(`[fuwuhao-ws] 连接关闭: ${reasonStr}`);
+    console.log(`[tencent-access-ws] 连接关闭: ${reasonStr}`);
     this.clearHeartbeat();
     this.ws = null;
 
@@ -409,7 +409,7 @@ export class FuwuhaoWebSocketClient {
    * 目前仅做日志记录（已注释），如需实现超时检测可在此处添加逻辑。
    */
   private handlePong = (): void => {
-    // console.log("[fuwuhao-ws] 💓 收到 pong");
+    // console.log("[tencent-access-ws] 💓 收到 pong");
   };
 
   /**
@@ -423,7 +423,7 @@ export class FuwuhaoWebSocketClient {
    * 注意：error 事件之后通常会紧跟 close 事件，重连逻辑在 handleClose 中处理。
    */
   private handleError = (error: Error): void => {
-    console.error("[fuwuhao-ws] 连接错误:", error);
+    console.error("[tencent-access-ws] 连接错误:", error);
     this.callbacks.onError?.(error);
   };
 
@@ -463,7 +463,7 @@ export class FuwuhaoWebSocketClient {
       this.config.maxReconnectAttempts > 0 &&
       this.reconnectAttempts >= this.config.maxReconnectAttempts
     ) {
-      console.error(`[fuwuhao-ws] 已达最大重连次数 (${this.config.maxReconnectAttempts})，停止重连`);
+      console.error(`[tencent-access-ws] 已达最大重连次数 (${this.config.maxReconnectAttempts})，停止重连`);
       this.state = "disconnected";
       return;
     }
@@ -478,7 +478,7 @@ export class FuwuhaoWebSocketClient {
     );
 
     console.log(
-      `[fuwuhao-ws] ${delay}ms 后尝试第 ${this.reconnectAttempts} 次重连...`
+      `[tencent-access-ws] ${delay}ms 后尝试第 ${this.reconnectAttempts} 次重连...`
     );
 
     // setTimeout 返回的句柄保存到 reconnectTimer，
@@ -531,9 +531,9 @@ export class FuwuhaoWebSocketClient {
           // ws.ping() 发送 WebSocket 原生 ping 控制帧
           // 服务端的 WebSocket 库会自动回复 pong 帧，无需手动处理
           this.ws.ping();
-          // console.log("[fuwuhao-ws] 💓 ping 发送");
+          // console.log("[tencent-access-ws] 💓 ping 发送");
         } catch {
-          console.warn("[fuwuhao-ws] 心跳发送失败");
+          console.warn("[tencent-access-ws] 心跳发送失败");
         }
       }
     }, this.config.heartbeatInterval);
@@ -576,7 +576,7 @@ export class FuwuhaoWebSocketClient {
    */
   private sendEnvelope = <T>(method: AGPMethod, payload: T): void => {
     if (!this.ws || this.state !== "connected") {
-      console.warn(`[fuwuhao-ws] 无法发送消息，当前状态: ${this.state}`);
+      console.warn(`[tencent-access-ws] 无法发送消息，当前状态: ${this.state}`);
       return;
     }
 
@@ -591,9 +591,9 @@ export class FuwuhaoWebSocketClient {
       const data = JSON.stringify(envelope);
       // ws.send() 将字符串作为 WebSocket 文本帧发送
       this.ws.send(data);
-      console.log(`[fuwuhao-ws] 发送消息: method=${method}, msg_id=${envelope.msg_id}`);
+      console.log(`[tencent-access-ws] 发送消息: method=${method}, msg_id=${envelope.msg_id}`);
     } catch (error) {
-      console.error("[fuwuhao-ws] 消息发送失败:", error);
+      console.error("[tencent-access-ws] 消息发送失败:", error);
       this.callbacks.onError?.(
         error instanceof Error ? error : new Error(`消息发送失败: ${String(error)}`)
       );
@@ -626,7 +626,7 @@ export class FuwuhaoWebSocketClient {
     this.msgIdCleanupTimer = setInterval(() => {
       if (this.processedMsgIds.size > FuwuhaoWebSocketClient.MAX_MSG_ID_CACHE) {
         console.log(
-          `[fuwuhao-ws] 清理消息 ID 缓存: ${this.processedMsgIds.size} → ${FuwuhaoWebSocketClient.MAX_MSG_ID_CACHE / 2}`
+          `[tencent-access-ws] 清理消息 ID 缓存: ${this.processedMsgIds.size} → ${FuwuhaoWebSocketClient.MAX_MSG_ID_CACHE / 2}`
         );
         // 将 Set 转为数组（保持插入顺序），取后半部分（最新的），重建 Set
         const entries = [...this.processedMsgIds];

@@ -1,6 +1,6 @@
 {
-  "id": "fuwuhao",
-  "channels": ["fuwuhao"],
+  "id": "tencent-access",
+  "channels": ["tencent-access"],
   "configSchema": {
     "type": "object",
     "additionalProperties": false,

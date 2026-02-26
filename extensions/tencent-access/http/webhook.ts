@@ -43,11 +43,11 @@ const mockAccount: SimpleAccount = {
  *    - 支持同步返回和流式返回（SSE）
  * 
  * 请求流程：
- * - GET /fuwuhao?signature=xxx&timestamp=xxx&nonce=xxx&echostr=xxx
+ * - GET /tencent-access?signature=xxx&timestamp=xxx&nonce=xxx&echostr=xxx
  *   → 验证签名 → 解密 echostr → 返回明文
- * - POST /fuwuhao （同步）
+ * - POST /tencent-access （同步）
  *   → 验证签名 → 解密消息 → 调用 Agent → 返回 JSON
- * - POST /fuwuhao?stream=true （流式）
+ * - POST /tencent-access?stream=true （流式）
  *   → 验证签名 → 解密消息 → 调用 Agent → 返回 SSE 流
  */
 export const handleSimpleWecomWebhook = async (
@@ -58,12 +58,12 @@ export const handleSimpleWecomWebhook = async (
   // 1. 路径匹配检查
   // ============================================
   // 检查请求路径是否匹配服务号 webhook 路径
-  // 支持：/fuwuhao、/fuwuhao/webhook、/fuwuhao/*
+  // 支持：/tencent-access、/tencent-access/webhook、/tencent-access/*
   if (!isFuwuhaoWebhookPath(req.url || "")) {
     return false; // 不是我们的路径，交给其他处理器
   }
 
-  console.log(`[fuwuhao] 收到请求: ${req.method} ${req.url}`);
+  console.log(`[tencent-access] 收到请求: ${req.method} ${req.url}`);
 
   try {
     // ============================================
@@ -79,7 +79,7 @@ export const handleSimpleWecomWebhook = async (
     // 3. 处理 GET 请求 - URL 验证
     // ============================================
     // 微信服务器在配置 webhook 时会发送 GET 请求验证 URL
-    // 请求格式：GET /fuwuhao?signature=xxx&timestamp=xxx&nonce=xxx&echostr=xxx
+    // 请求格式：GET /tencent-access?signature=xxx&timestamp=xxx&nonce=xxx&echostr=xxx
     if (req.method === "GET") {
       const echostr = query.get("echostr") || "";
       
@@ -123,7 +123,7 @@ export const handleSimpleWecomWebhook = async (
     // 4. 处理 POST 请求 - 用户消息
     // ============================================
     // 微信服务器会将用户发送的消息通过 POST 请求转发过来
-    // 请求格式：POST /fuwuhao?signature=xxx&timestamp=xxx&nonce=xxx
+    // 请求格式：POST /tencent-access?signature=xxx&timestamp=xxx&nonce=xxx
     // 请求体：加密的 JSON 或 XML 格式消息
     if (req.method === "POST") {
       // 读取请求体
@@ -178,7 +178,7 @@ export const handleSimpleWecomWebhook = async (
         // XML 格式处理（简化版）
         // ============================================
         // 可能是 XML 格式，简单处理
-        console.log("[fuwuhao] 收到非JSON格式数据，尝试简单解析");
+        console.log("[tencent-access] 收到非JSON格式数据，尝试简单解析");
         message = {
           msgtype: "text",
           Content: body,
@@ -205,7 +205,7 @@ export const handleSimpleWecomWebhook = async (
         // ============================================
         // SSE 是一种服务器向客户端推送实时数据的技术
         // 适用于：实时显示 AI 生成过程、工具调用状态等
-        console.log("[fuwuhao] 使用流式返回模式 (SSE)");
+        console.log("[tencent-access] 使用流式返回模式 (SSE)");
         
         // 设置 SSE 响应头
         res.statusCode = 200;
@@ -218,7 +218,7 @@ export const handleSimpleWecomWebhook = async (
         
         // 发送初始连接确认事件
         const connectedEvent = `data: ${JSON.stringify({ type: "connected", timestamp: Date.now() })}\n\n`;
-        console.log("[fuwuhao] SSE 发送连接确认:", connectedEvent.trim());
+        console.log("[tencent-access] SSE 发送连接确认:", connectedEvent.trim());
         res.write(connectedEvent);
         
         try {
@@ -227,18 +227,18 @@ export const handleSimpleWecomWebhook = async (
           await handleMessageStream(message, (chunk) => {
             // SSE 数据格式：data: {JSON}\n\n
             const sseData = `data: ${JSON.stringify(chunk)}\n\n`;
-            console.log("[fuwuhao] SSE 发送数据:", chunk.type, chunk.text?.slice(0, 50));
+            console.log("[tencent-access] SSE 发送数据:", chunk.type, chunk.text?.slice(0, 50));
             res.write(sseData);
             
             // 如果是完成或错误，关闭连接
             if (chunk.type === "done" || chunk.type === "error") {
-              console.log("[fuwuhao] SSE 连接关闭:", chunk.type);
+              console.log("[tencent-access] SSE 连接关闭:", chunk.type);
               res.end();
             }
           });
         } catch (streamErr) {
           // 流式处理异常，发送错误事件
-          console.error("[fuwuhao] SSE 流式处理异常:", streamErr);
+          console.error("[tencent-access] SSE 流式处理异常:", streamErr);
           const errorData = `data: ${JSON.stringify({ type: "error", text: String(streamErr), timestamp: Date.now() })}\n\n`;
           res.write(errorData);
           res.end();
@@ -269,7 +269,7 @@ export const handleSimpleWecomWebhook = async (
     // 5. 异常处理
     // ============================================
     // 捕获所有未处理的异常，返回 500 错误
-    console.error("[fuwuhao] Webhook 处理异常:", error);
+    console.error("[tencent-access] Webhook 处理异常:", error);
     res.statusCode = 500;
     res.setHeader("Content-Type", "text/plain; charset=utf-8");
     res.end("服务器内部错误");
