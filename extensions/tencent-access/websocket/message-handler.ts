@@ -105,16 +105,22 @@ export const handlePrompt = async (
 ): Promise<void> => {
   const { payload } = message;
   const { session_id: sessionId, prompt_id: promptId } = payload;
-  const userId = message.user_id;
-
+  const userId = message.user_id ?? "";
+  const guid = message.guid;
+  //message {
+  //   msg_id: '9b842a47-c07d-4307-974f-42a4f8eeecb4',
+  //       guid: '0ef9cc5e5dcb7ca068b0fb9982352c33',
+  //       user_id: '3730000',
+  //       method: 'session.prompt',
+  //       payload: {
+  //     session_id: '384f885b-4387-4f2b-9233-89a5fe6f94ee',
+  //         prompt_id: 'ca694ac8-35e3-4e8b-9ecc-88efd4324515',
+  //         agent_app: 'agent_demo',
+  //         content: [ [Object] ]
+  //   }
+  // }
   const textContent = extractTextFromContent(payload.content);
-  console.log("[tencent-access-ws] 收到 prompt:", {
-    sessionId,
-    promptId,
-    userId,
-    agentApp: payload.agent_app,
-    内容: textContent.slice(0, 100),
-  });
+  console.log("[tencent-access-ws] 收到 prompt:", payload);
 
   // ============================================
   // 1. 注册活跃 Turn
@@ -276,7 +282,7 @@ export const handlePrompt = async (
           client.sendMessageChunk(sessionId, promptId, {
             type: "text",
             text: textToSend,
-          });
+          }, guid, userId);
         }
         return;
       }
@@ -304,7 +310,7 @@ export const handlePrompt = async (
             kind: mapToolKind(toolName), // 根据工具名推断工具类型（read/edit/search 等）
             status: "in_progress",
           };
-          client.sendToolCall(sessionId, promptId, toolCall);
+          client.sendToolCall(sessionId, promptId, toolCall, guid, userId);
         } else if (phase === "update") {
           // 工具执行中有中间结果（如读取文件的部分内容）
           const toolCall: ToolCall = {
@@ -315,7 +321,7 @@ export const handlePrompt = async (
               ? [{ type: "text" as const, text: data.text as string }]
               : undefined,
           };
-          client.sendToolCallUpdate(sessionId, promptId, toolCall);
+          client.sendToolCallUpdate(sessionId, promptId, toolCall, guid, userId);
         } else if (phase === "result") {
           // 工具执行完成：更新状态为 completed 或 failed
           const isError = data.isError as boolean | undefined;
@@ -328,7 +334,7 @@ export const handlePrompt = async (
               ? [{ type: "text" as const, text: data.result as string }]
               : undefined,
           };
-          client.sendToolCallUpdate(sessionId, promptId, toolCall);
+          client.sendToolCallUpdate(sessionId, promptId, toolCall, guid, userId);
         }
         return;
       }
@@ -437,7 +443,7 @@ export const handlePrompt = async (
         session_id: sessionId,
         prompt_id: promptId,
         stop_reason: "cancelled",
-      });
+      }, guid, userId);
       return;
     }
 
@@ -452,7 +458,7 @@ export const handlePrompt = async (
       prompt_id: promptId,
       stop_reason: "end_turn",
       content: responseContent,
-    });
+    }, guid, userId);
 
     console.log("[tencent-access-ws] prompt 处理完成:", { promptId, hasReply: !!finalText });
   } catch (err) {
@@ -472,7 +478,7 @@ export const handlePrompt = async (
       prompt_id: promptId,
       stop_reason: "error",
       error: err instanceof Error ? err.message : String(err),
-    });
+    }, guid, userId);
   }
 };
 

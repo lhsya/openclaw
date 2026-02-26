@@ -92,6 +92,7 @@ export class FuwuhaoWebSocketClient {
   constructor(config: WebSocketClientConfig, callbacks: WebSocketClientCallbacks = {}) {
     this.config = {
       url: config.url,
+      guid: config.guid,
       userId: config.userId,
       token: config.token,
       reconnectInterval: config.reconnectInterval ?? 3000,
@@ -164,14 +165,14 @@ export class FuwuhaoWebSocketClient {
    * 在 Agent 生成回复的过程中，将增量文本实时推送给服务端，
    * 服务端再转发给用户端展示流式输出效果。
    */
-  sendMessageChunk = (sessionId: string, promptId: string, content: ContentBlock): void => {
+  sendMessageChunk = (sessionId: string, promptId: string, content: ContentBlock, guid?: string, userId?: string): void => {
     const payload: UpdatePayload = {
       session_id: sessionId,
       prompt_id: promptId,
       update_type: "message_chunk",
       content,
     };
-    this.sendEnvelope("session.update", payload);
+    this.sendEnvelope("session.update", payload, guid, userId);
   };
 
   /**
@@ -182,14 +183,14 @@ export class FuwuhaoWebSocketClient {
    * @description
    * 当 Agent 开始调用某个工具时发送，通知服务端展示工具调用状态。
    */
-  sendToolCall = (sessionId: string, promptId: string, toolCall: ToolCall): void => {
+  sendToolCall = (sessionId: string, promptId: string, toolCall: ToolCall, guid?: string, userId?: string): void => {
     const payload: UpdatePayload = {
       session_id: sessionId,
       prompt_id: promptId,
       update_type: "tool_call",
       tool_call: toolCall,
     };
-    this.sendEnvelope("session.update", payload);
+    this.sendEnvelope("session.update", payload, guid, userId);
   };
 
   /**
@@ -200,14 +201,14 @@ export class FuwuhaoWebSocketClient {
    * @description
    * 当工具执行完成或失败时发送，通知服务端更新工具调用的展示状态。
    */
-  sendToolCallUpdate = (sessionId: string, promptId: string, toolCall: ToolCall): void => {
+  sendToolCallUpdate = (sessionId: string, promptId: string, toolCall: ToolCall, guid?: string, userId?: string): void => {
     const payload: UpdatePayload = {
       session_id: sessionId,
       prompt_id: promptId,
       update_type: "tool_call_update",
       tool_call: toolCall,
     };
-    this.sendEnvelope("session.update", payload);
+    this.sendEnvelope("session.update", payload, guid, userId);
   };
 
   /**
@@ -217,8 +218,8 @@ export class FuwuhaoWebSocketClient {
    * Agent 处理完成后发送，告知服务端本次 Turn 已结束。
    * stop_reason 可以是：end_turn（正常完成）、cancelled（被取消）、error（出错）
    */
-  sendPromptResponse = (payload: PromptResponsePayload): void => {
-    this.sendEnvelope("session.promptResponse", payload);
+  sendPromptResponse = (payload: PromptResponsePayload, guid?: string, userId?: string): void => {
+    this.sendEnvelope("session.promptResponse", payload, guid, userId);
   };
 
 
@@ -574,15 +575,17 @@ export class FuwuhaoWebSocketClient {
    *
    * `randomUUID()` 为每条消息生成唯一 ID，服务端可用于去重和追踪。
    */
-  private sendEnvelope = <T>(method: AGPMethod, payload: T): void => {
+  private sendEnvelope = <T>(method: AGPMethod, payload: T, guid?: string, userId?: string): void => {
     if (!this.ws || this.state !== "connected") {
       console.warn(`[tencent-access-ws] 无法发送消息，当前状态: ${this.state}`);
       return;
     }
 
     const envelope: AGPEnvelope<T> = {
-      msg_id: randomUUID(), // 每条消息生成唯一 UUID，用于服务端去重和日志追踪
+      msg_id: randomUUID(),
       token: this.config.token || '',
+      guid,
+      user_id: userId,
       method,
       payload,
     };

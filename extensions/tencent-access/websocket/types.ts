@@ -24,6 +24,10 @@ export interface AGPEnvelope<T = unknown> {
   msg_id: string;
   /** 用户账户 ID */
   token: string;
+  /** 设备唯一标识（下行消息携带，上行消息需原样回传） */
+  guid?: string;
+  /** 用户 ID（下行消息携带，上行消息需原样回传） */
+  user_id?: string;
   /** 消息类型 */
   method: AGPMethod;
   /** 消息载荷 */
