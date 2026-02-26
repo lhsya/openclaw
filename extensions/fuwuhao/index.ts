@@ -2,7 +2,7 @@ import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
 import { emptyPluginConfigSchema } from "openclaw/plugin-sdk";
 
 import { handleSimpleWecomWebhook } from "./http/webhook.js";
-import { setWecomRuntime } from "./http/runtime.js";
+import { setWecomRuntime } from "./common/runtime";
 
 // 类型定义
 type NormalizedChatType = "direct" | "group" | "channel";

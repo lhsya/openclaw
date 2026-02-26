@@ -56,4 +56,4 @@ export {
 // Runtime
 export {
   getWecomRuntime,
-} from "./runtime.js";
+} from "../common/runtime";

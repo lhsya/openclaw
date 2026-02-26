@@ -1,5 +1,5 @@
 import type { FuwuhaoMessage } from "./types.js";
-import { getWecomRuntime } from "./runtime.js";
+import { getWecomRuntime } from "../common/runtime";
 
 // ============================================
 // 消息上下文构建

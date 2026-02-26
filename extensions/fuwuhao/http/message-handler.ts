@@ -1,5 +1,5 @@
 import type { FuwuhaoMessage, CallbackPayload, StreamCallback, AgentEventPayload } from "./types.js";
-import { getWecomRuntime } from "./runtime.js";
+import { getWecomRuntime } from "../common/runtime";
 import { buildMessageContext } from "./message-context.js";
 
 // ============================================
