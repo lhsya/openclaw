@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import WebSocket from "ws";
 import type {
   AGPEnvelope,
   AGPMethod,
@@ -186,10 +187,11 @@ export class FuwuhaoWebSocketClient {
   private setupEventHandlers = (): void => {
     if (!this.ws) return;
 
-    this.ws.addEventListener("open", this.handleOpen);
-    this.ws.addEventListener("message", this.handleRawMessage);
-    this.ws.addEventListener("close", this.handleClose);
-    this.ws.addEventListener("error", this.handleError);
+    this.ws.on("open", this.handleOpen);
+    this.ws.on("message", this.handleRawMessage);
+    this.ws.on("close", this.handleClose);
+    this.ws.on("error", this.handleError);
+    this.ws.on("pong", this.handlePong);
   };
 
   // ============================================
@@ -204,10 +206,10 @@ export class FuwuhaoWebSocketClient {
     this.callbacks.onConnected?.();
   };
 
-  private handleRawMessage = (event: MessageEvent): void => {
+  private handleRawMessage = (data: WebSocket.RawData): void => {
     try {
-      const data = typeof event.data === "string" ? event.data : String(event.data);
-      const envelope = JSON.parse(data) as AGPEnvelope;
+      const raw = typeof data === "string" ? data : data.toString();
+      const envelope = JSON.parse(raw) as AGPEnvelope;
 
       // 消息去重
       if (this.processedMsgIds.has(envelope.msg_id)) {
@@ -230,29 +232,32 @@ export class FuwuhaoWebSocketClient {
           console.warn(`[fuwuhao-ws] 未知消息类型: ${envelope.method}`);
       }
     } catch (error) {
-      console.error("[fuwuhao-ws] 消息解析失败:", error, "原始数据:", event.data);
+      console.error("[fuwuhao-ws] 消息解析失败:", error, "原始数据:", data);
       this.callbacks.onError?.(
         error instanceof Error ? error : new Error(`消息解析失败: ${String(error)}`)
       );
     }
   };
 
-  private handleClose = (event: CloseEvent): void => {
-    const reason = event.reason || `code=${event.code}`;
-    console.log(`[fuwuhao-ws] 连接关闭: ${reason}`);
+  private handleClose = (code: number, reason: Buffer): void => {
+    const reasonStr = reason.toString() || `code=${code}`;
+    console.log(`[fuwuhao-ws] 连接关闭: ${reasonStr}`);
     this.clearHeartbeat();
     this.ws = null;
 
     // 仅在非主动关闭的情况下尝试重连
     if (this.state !== "disconnected") {
-      this.callbacks.onDisconnected?.(reason);
+      this.callbacks.onDisconnected?.(reasonStr);
       this.scheduleReconnect();
     }
   };
 
-  private handleError = (event: Event): void => {
-    const error = new Error(`WebSocket 连接错误`);
-    console.error("[fuwuhao-ws] 连接错误:", event);
+  private handlePong = (): void => {
+    console.log("[fuwuhao-ws] 💓 收到 pong");
+  };
+
+  private handleError = (error: Error): void => {
+    console.error("[fuwuhao-ws] 连接错误:", error);
     this.callbacks.onError?.(error);
   };
 
@@ -310,10 +315,9 @@ export class FuwuhaoWebSocketClient {
     this.clearHeartbeat();
     this.heartbeatTimer = setInterval(() => {
       if (this.ws && this.state === "connected") {
-        // WebSocket 标准 ping（某些环境不支持，降级为空消息）
         try {
-          this.ws.send("");
-          console.log("[fuwuhao-ws] 💓 心跳发送");
+          this.ws.ping();
+          console.log("[fuwuhao-ws] 💓 ping 发送");
         } catch {
           console.warn("[fuwuhao-ws] 心跳发送失败");
         }

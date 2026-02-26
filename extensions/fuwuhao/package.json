@@ -34,6 +34,7 @@
   "dependencies": {
     "fast-xml-parser": "5.3.4",
     "undici": "^7.20.0",
+    "ws": "^8.18.0",
     "zod": "^4.3.6"
   },
   "peerDependencies": {
@@ -41,6 +42,7 @@
   },
   "devDependencies": {
     "@types/node": "^25.2.0",
+    "@types/ws": "^8.5.14",
     "typescript": "^5.9.3"
   }
 }

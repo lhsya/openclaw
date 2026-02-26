@@ -37,7 +37,8 @@ export type AGPMethod =
   | "session.prompt"
   | "session.cancel"
   | "session.update"
-  | "session.promptResponse";
+  | "session.promptResponse"
+  | "ping";
 
 // ============================================
 // 通用数据结构
