@@ -1,15 +1,25 @@
 import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
 import { emptyPluginConfigSchema } from "openclaw/plugin-sdk";
-
-import { handleSimpleWecomWebhook } from "./http/webhook.js";
+import { FuwuhaoWebSocketClient, handlePrompt, handleCancel } from "./websocket";
+// import { handleSimpleWecomWebhook } from "./http/webhook.js";
 import { setWecomRuntime } from "./common/runtime";
 
 // 类型定义
 type NormalizedChatType = "direct" | "group" | "channel";
-// 模拟发送消息
-// curl -X POST "http://127.0.0.1:19001/fuwuhao?timestamp=1234567890&nonce=abc123&msg_signature=test_sig" \
-//   -H "Content-Type: application/json" \
-//   -d '{"encrypt": "test_encrypted_content"}'
+
+// WebSocket 客户端实例
+let wsClient: FuwuhaoWebSocketClient | null = null;
+
+// WebSocket 配置（从环境变量读取）
+const WS_CONFIG = {
+  url: "ws://21.0.62.97:8080/",
+  guid: "fuwuhao_device_001",
+  userId: "fuwuhao_user_001",
+  token: "",
+  reconnectInterval: 3000,
+  maxReconnectAttempts: 0,
+  heartbeatInterval:20000,
+};
 // 渠道元数据
 const meta = {
   id: "fuwuhao",
@@ -69,7 +79,7 @@ const fuwuhaoPlugin = {
 const index = {
   id: "fuwuhao",
   name: "微信服务号",
-  description: "微信服务号 Webhook 接收消息插件",
+  description: "微信服务号 WebSocket 接收消息插件",
   configSchema: emptyPluginConfigSchema(),
   
   /**
@@ -84,8 +94,30 @@ const index = {
     api.registerChannel({ plugin: fuwuhaoPlugin as any });
     
     // 3. 注册 HTTP 处理器
-    api.registerHttpHandler(handleSimpleWecomWebhook);
-    
+    // api.registerHttpHandler(handleSimpleWecomWebhook);
+    // 3. 初始化并启动 WebSocket 客户端
+    wsClient = new FuwuhaoWebSocketClient(WS_CONFIG, {
+      onConnected: () => {
+        console.log("[fuwuhao] WebSocket 连接成功");
+      },
+      onDisconnected: (reason) => {
+        console.log(`[fuwuhao] WebSocket 连接断开: ${reason}`);
+      },
+      onPrompt: (message) => {
+        // 异步处理，不阻塞 WebSocket 消息循环
+        void handlePrompt(message, wsClient!).catch((err) => {
+          console.error("[fuwuhao] 处理 prompt 失败:", err);
+        });
+      },
+      onCancel: (message) => {
+        handleCancel(message, wsClient!);
+      },
+      onError: (error) => {
+        console.error("[fuwuhao] WebSocket 错误:", error.message);
+      },
+    });
+    wsClient.start();
+
     console.log("微信服务号插件已注册");
   },
 };
