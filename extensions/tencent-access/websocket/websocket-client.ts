@@ -5,15 +5,6 @@
  * 每次调用都会生成一个全局唯一的随机字符串，用作消息的 msg_id。
  * 注意：这是 Node.js 原生 API，不需要安装任何第三方库。
  */
-/**
- * `ws` 是 Node.js 生态中最流行的 WebSocket 客户端/服务端库。
- * 默认导入的 `WebSocket` 是客户端类，用法类似浏览器原生 WebSocket，但有以下区别：
- *   - 使用 `.on(event, handler)` 注册事件（Node.js EventEmitter 风格），而非 addEventListener
- *   - 支持 `.ping()` / `.pong()` 方法，可发送 WebSocket 协议层的控制帧
- *   - close 事件回调参数是 `(code: number, reason: Buffer)`，而非 CloseEvent 对象
- *   - message 事件回调参数是 `(data: WebSocket.RawData)`，而非 MessageEvent 对象
- *   - `WebSocket.RawData` 类型是 `Buffer | ArrayBuffer | Buffer[]`，需要手动转为字符串
- */
 import { randomUUID } from "node:crypto";
 import WebSocket from "ws";
 import type {
@@ -583,9 +574,8 @@ export class FuwuhaoWebSocketClient {
 
     const envelope: AGPEnvelope<T> = {
       msg_id: randomUUID(),
-      token: this.config.token || '',
-      guid,
-      user_id: userId,
+      guid: guid ?? this.config.guid,
+      user_id: userId ?? this.config.userId,
       method,
       payload,
     };
@@ -594,7 +584,7 @@ export class FuwuhaoWebSocketClient {
       const data = JSON.stringify(envelope);
       // ws.send() 将字符串作为 WebSocket 文本帧发送
       this.ws.send(data);
-      console.log(`[tencent-access-ws] 发送消息: method=${method}, msg_id=${envelope.msg_id}`);
+      console.log(`[tencent-access-ws] 发送消息: method=${method}, msg_id=${envelope.msg_id}, json=${data}`);
     } catch (error) {
       console.error("[tencent-access-ws] 消息发送失败:", error);
       this.callbacks.onError?.(

@@ -106,7 +106,7 @@ export const handlePrompt = async (
   const { payload } = message;
   const { session_id: sessionId, prompt_id: promptId } = payload;
   const userId = message.user_id ?? "";
-  const guid = message.guid;
+  const guid = message.guid ?? "";
   //message {
   //   msg_id: '9b842a47-c07d-4307-974f-42a4f8eeecb4',
   //       guid: '0ef9cc5e5dcb7ca068b0fb9982352c33',
