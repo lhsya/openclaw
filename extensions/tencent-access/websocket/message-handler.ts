@@ -16,7 +16,7 @@ import type {
   ContentBlock,
   ToolCall,
 } from "./types.js";
-import type { AgentEventPayload } from "../http/types.js";
+import { onAgentEvent, type AgentEventPayload } from "openclaw/plugin-sdk";
 import type { FuwuhaoWebSocketClient } from "./websocket-client.js";
 
 /**
@@ -247,7 +247,7 @@ export const handlePrompt = async (
     let lastEmittedText = ""; // 记录已发送的累积文本，用于计算增量
     let toolCallCounter = 0;  // 工具调用计数器，用于生成备用 toolCallId
 
-    const unsubscribe = runtime.events.onAgentEvent((evt: AgentEventPayload) => {
+    const unsubscribe = onAgentEvent((evt: AgentEventPayload) => {
       // 如果 Turn 已被取消，忽略后续事件（不再向服务端推送）
       if (turn.cancelled) return;
 

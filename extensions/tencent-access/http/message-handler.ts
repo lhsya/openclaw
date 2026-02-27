@@ -1,4 +1,5 @@
 import type { FuwuhaoMessage, CallbackPayload, StreamCallback, AgentEventPayload } from "./types.js";
+import { onAgentEvent } from "openclaw/plugin-sdk";
 import { getWecomRuntime } from "../common/runtime";
 import { buildMessageContext } from "./message-context.js";
 
@@ -306,7 +307,7 @@ export const handleMessageStream = async (
   console.log("[tencent-access] 注册 onAgentEvent 监听器...");
   let lastEmittedText = ""; // 用于去重，只发送增量文本
   
-  const unsubscribeAgentEvents = runtime.events.onAgentEvent((evt: AgentEventPayload) => {
+const unsubscribeAgentEvents = onAgentEvent((evt: AgentEventPayload) => {
     // 记录所有事件（调试用）
     console.log(`[tencent-access] 收到 AgentEvent: stream=${evt.stream}, runId=${evt.runId}`);
     
