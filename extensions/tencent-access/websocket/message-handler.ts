@@ -16,7 +16,7 @@ import type {
   ContentBlock,
   ToolCall,
 } from "./types.js";
-import { onAgentEvent, type AgentEventPayload } from "openclaw/plugin-sdk";
+import { onAgentEvent, type AgentEventPayload } from "../common/agent-events.js";
 import type { TencentAccessWebSocketClient } from "./websocket-client.js";
 
 /**

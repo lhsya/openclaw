@@ -1,5 +1,5 @@
-import type { FuwuhaoMessage, CallbackPayload, StreamCallback, AgentEventPayload } from "./types.js";
-import { onAgentEvent } from "openclaw/plugin-sdk";
+import type { FuwuhaoMessage, CallbackPayload, StreamCallback } from "./types.js";
+import { onAgentEvent, type AgentEventPayload } from "../common/agent-events.js";
 import { getWecomRuntime } from "../common/runtime";
 import { buildMessageContext } from "./message-context.js";
 

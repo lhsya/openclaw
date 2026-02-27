@@ -43,7 +43,7 @@
   "devDependencies": {
     "@types/node": "^25.2.0",
     "@types/ws": "^8.5.14",
-    "openclaw": "workspace:*",
+    "openclaw": ">=2026.1.26",
     "typescript": "^5.9.3"
   }
 }
