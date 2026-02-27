@@ -17,7 +17,7 @@ import type {
   ToolCall,
 } from "./types.js";
 import { onAgentEvent, type AgentEventPayload } from "openclaw/plugin-sdk";
-import type { FuwuhaoWebSocketClient } from "./websocket-client.js";
+import type { TencentAccessWebSocketClient } from "./websocket-client.js";
 
 /**
  * `getWecomRuntime` 返回 OpenClaw 框架注入的运行时实例（PluginRuntime）。
@@ -101,7 +101,7 @@ const activeTurns = new Map<string, ActiveTurn>();
  */
 export const handlePrompt = async (
   message: PromptMessage,
-  client: FuwuhaoWebSocketClient
+  client: TencentAccessWebSocketClient
 ): Promise<void> => {
   const { payload } = message;
   const { session_id: sessionId, prompt_id: promptId } = payload;
@@ -499,7 +499,7 @@ export const handlePrompt = async (
  */
 export const handleCancel = (
   message: CancelMessage,
-  client: FuwuhaoWebSocketClient
+  client: TencentAccessWebSocketClient
 ): void => {
   const { session_id: sessionId, prompt_id: promptId } = message.payload;
 

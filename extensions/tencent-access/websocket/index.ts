@@ -27,7 +27,7 @@ export type {
 } from "./types.js";
 
 // WebSocket 客户端
-export { FuwuhaoWebSocketClient } from "./websocket-client.js";
+export { TencentAccessWebSocketClient } from "./websocket-client.js";
 
 // 消息处理器
 export { handlePrompt, handleCancel } from "./message-handler.js";

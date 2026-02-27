@@ -1,6 +1,6 @@
 import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
 import { emptyPluginConfigSchema } from "openclaw/plugin-sdk";
-import { FuwuhaoWebSocketClient, handlePrompt, handleCancel } from "./websocket";
+import { TencentAccessWebSocketClient, handlePrompt, handleCancel } from "./websocket";
 // import { handleSimpleWecomWebhook } from "./http/webhook.js";
 import { setWecomRuntime } from "./common/runtime";
 
@@ -8,7 +8,7 @@ import { setWecomRuntime } from "./common/runtime";
 type NormalizedChatType = "direct" | "group" | "channel";
 
 // WebSocket 客户端实例
-let wsClient: FuwuhaoWebSocketClient | null = null;
+let wsClient: TencentAccessWebSocketClient | null = null;
 
 // WebSocket 配置（从环境变量读取）
 const WS_CONFIG = {
@@ -17,7 +17,7 @@ const WS_CONFIG = {
   guid: "",
   userId: "",
   reconnectInterval: 3000,
-  maxReconnectAttempts: 0,
+  maxReconnectAttempts: 10,
   heartbeatInterval: 20000,
 };
 // 渠道元数据
@@ -109,7 +109,7 @@ const index = {
     // 4. 注册 HTTP 处理器
     // api.registerHttpHandler(handleSimpleWecomWebhook);
     // 4. 初始化并启动 WebSocket 客户端
-    wsClient = new FuwuhaoWebSocketClient(WS_CONFIG, {
+    wsClient = new TencentAccessWebSocketClient(WS_CONFIG, {
       onConnected: () => {
         console.log("[tencent-access] WebSocket 连接成功");
       },

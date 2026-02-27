@@ -234,7 +234,7 @@ export type PromptResponseMessage = AGPEnvelope<PromptResponsePayload>;
 /**
  * WebSocket 客户端配置
  * @description
- * 在插件入口（index.ts）的 WS_CONFIG 常量中配置，传入 FuwuhaoWebSocketClient 构造函数。
+ * 在插件入口（index.ts）的 WS_CONFIG 常量中配置，传入 TencentAccessWebSocketClient 构造函数。
  */
 export interface WebSocketClientConfig {
   /** WebSocket 服务端地址（如 ws://21.0.62.97:8080/） */

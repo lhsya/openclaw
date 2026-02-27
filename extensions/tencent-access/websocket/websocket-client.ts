@@ -36,7 +36,7 @@ import type {
  * - 心跳保活：定期发送 WebSocket 原生 ping 帧，防止服务端因空闲超时断开连接
  * - 消息去重：通过 msg_id 实现幂等处理，避免重复消息被处理两次
  */
-export class FuwuhaoWebSocketClient {
+export class TencentAccessWebSocketClient {
   private config: Required<Omit<WebSocketClientConfig, "token">> & { token?: string };
   private callbacks: WebSocketClientCallbacks;
 
@@ -617,14 +617,14 @@ export class FuwuhaoWebSocketClient {
   private startMsgIdCleanup = (): void => {
     this.clearMsgIdCleanup();
     this.msgIdCleanupTimer = setInterval(() => {
-      if (this.processedMsgIds.size > FuwuhaoWebSocketClient.MAX_MSG_ID_CACHE) {
+      if (this.processedMsgIds.size > TencentAccessWebSocketClient.MAX_MSG_ID_CACHE) {
         console.log(
-          `[tencent-access-ws] 清理消息 ID 缓存: ${this.processedMsgIds.size} → ${FuwuhaoWebSocketClient.MAX_MSG_ID_CACHE / 2}`
+          `[tencent-access-ws] 清理消息 ID 缓存: ${this.processedMsgIds.size} → ${TencentAccessWebSocketClient.MAX_MSG_ID_CACHE / 2}`
         );
         // 将 Set 转为数组（保持插入顺序），取后半部分（最新的），重建 Set
         const entries = [...this.processedMsgIds];
         this.processedMsgIds.clear();
-        entries.slice(-FuwuhaoWebSocketClient.MAX_MSG_ID_CACHE / 2).forEach((id) => {
+        entries.slice(-TencentAccessWebSocketClient.MAX_MSG_ID_CACHE / 2).forEach((id) => {
           this.processedMsgIds.add(id);
         });
       }
