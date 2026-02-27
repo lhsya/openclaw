@@ -83,8 +83,8 @@ export class FuwuhaoWebSocketClient {
   constructor(config: WebSocketClientConfig, callbacks: WebSocketClientCallbacks = {}) {
     this.config = {
       url: config.url,
-      guid: config.guid,
-      userId: config.userId,
+      guid: config.guid ?? '',
+      userId: config.userId ?? '',
       token: config.token,
       reconnectInterval: config.reconnectInterval ?? 3000,
       maxReconnectAttempts: config.maxReconnectAttempts ?? 0,

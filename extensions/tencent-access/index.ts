@@ -12,13 +12,13 @@ let wsClient: FuwuhaoWebSocketClient | null = null;
 
 // WebSocket 配置（从环境变量读取）
 const WS_CONFIG = {
-  url: "ws://21.0.62.97:8080/",
-  guid: "tencent-access_device_001",
-  userId: "tencent-access_user_001",
+  url: "",
   token: "",
+  guid: "",
+  userId: "",
   reconnectInterval: 3000,
   maxReconnectAttempts: 0,
-  heartbeatInterval:20000,
+  heartbeatInterval: 20000,
 };
 // 渠道元数据
 const meta = {
@@ -98,10 +98,13 @@ const index = {
     // 使用 as any 绕过严格类型检查（简化版插件不需要完整的 config 适配器）
     api.registerChannel({ plugin: tencentAccessPlugin as any });
     
-    // 3. 从配置中读取 token，写入 WS_CONFIG
+    // 3. 从配置中读取 token 和 wsUrl，写入 WS_CONFIG
     const tencentAccessConfig = (api.config as any)?.channels?.["tencent-access"];
     if (tencentAccessConfig?.token) {
       WS_CONFIG.token = String(tencentAccessConfig.token);
+    }
+    if (tencentAccessConfig?.wsUrl) {
+      WS_CONFIG.url = String(tencentAccessConfig.wsUrl);
     }
     // 4. 注册 HTTP 处理器
     // api.registerHttpHandler(handleSimpleWecomWebhook);
