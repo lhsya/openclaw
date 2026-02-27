@@ -131,7 +131,7 @@ const index = {
     });
     wsClient.start();
 
-    console.log("[tencent-access] 微信服务号插件已注册");
+    console.log("[tencent-access] 腾讯通路插件已注册");
   },
 };
 

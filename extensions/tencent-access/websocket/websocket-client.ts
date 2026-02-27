@@ -27,7 +27,7 @@ import type {
 // 负责 WebSocket 连接管理、消息收发、自动重连、心跳保活
 
 /**
- * 服务号 WebSocket 客户端
+ * WebSocket 客户端
  * @description
  * 连接到 AGP WebSocket 服务端，处理双向通信：
  * - 接收下行消息：session.prompt / session.cancel
